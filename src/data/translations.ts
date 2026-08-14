@@ -3,8 +3,8 @@ export type Language = 'fa' | 'en';
 export const translations = {
   fa: {
     // Brand & Header
-    appName: 'ولتیار',
-    appSubName: 'walletyar',
+    appName: 'کیف یار',
+    appSubName: 'kifyar',
     dashboardTitle: 'داشبورد مدیریت و تحلیل منابع مالی',
     analyticsTitle: 'بودجه‌بندی و نمودارهای تحلیلی روند هزینه‌ها',
     transactionsTitle: 'دفتر ثبت و فیلتر پیشرفته تراکنش‌ها',
@@ -31,7 +31,7 @@ export const translations = {
     currentBalance: 'خالص دارایی فعلی',
     live: 'زنده',
     toman: 'تومان',
-    aiBannerTitle: 'هوش مصنوعی ولتیار',
+    aiBannerTitle: 'هوش مصنوعی کیف یار',
     aiBannerDesc: 'تحلیل هوشمند رفتار مالی و پیشنهادهای بودجه‌بندی',
     aiBannerBtn: 'مشاوره و تحلیل مالی',
 
@@ -91,7 +91,7 @@ export const translations = {
     settleBtn: 'ثبت تسویه',
 
     // Settings & Profile View
-    settingsPanelTitle: 'پنل تنظیمات پیشرفته ولتیار',
+    settingsPanelTitle: 'پنل تنظیمات پیشرفته کیف یار',
     settingsPanelDesc: 'مدیریت تم، احراز هویت با ایمیل و تغییر زبان برنامه',
     themeMode: 'حالت نمایش (تاریک / روشن)',
     lightMode: 'حالت روشن (Bright)',
@@ -116,13 +116,13 @@ export const translations = {
     savedSuccessfully: 'تغییرات با موفقیت ثبت شد',
 
     // Copyright Legal Text (Required)
-    copyrightFa: 'تمامی حقوق مادی و معنوی این سایت متعلق به ولتیار (wallet-yar) است.',
-    copyrightEn: 'All material and intellectual rights of this site belong to wallet-yar.',
+    copyrightFa: 'تمامی حقوق مادی و معنوی این سایت متعلق به کیف یار (kif-yar) است.',
+    copyrightEn: 'All material and intellectual rights of this site belong to kif-yar.',
   },
   en: {
     // Brand & Header
-    appName: 'WalletYar',
-    appSubName: 'walletyar',
+    appName: 'Kifyar',
+    appSubName: 'kifyar',
     dashboardTitle: 'Financial Resources & Asset Dashboard',
     analyticsTitle: 'Budgeting & Expense Analysis Charts',
     transactionsTitle: 'Advanced Transaction Ledger & Filters',
@@ -149,7 +149,7 @@ export const translations = {
     currentBalance: 'Net Balance',
     live: 'LIVE',
     toman: 'Tomans',
-    aiBannerTitle: 'WalletYar AI',
+    aiBannerTitle: 'Kifyar AI',
     aiBannerDesc: 'Smart financial behavior analysis and budget advice',
     aiBannerBtn: 'Financial Analysis',
 
@@ -209,7 +209,7 @@ export const translations = {
     settleBtn: 'Settle',
 
     // Settings & Profile View
-    settingsPanelTitle: 'WalletYar Advanced Settings',
+    settingsPanelTitle: 'Kifyar Advanced Settings',
     settingsPanelDesc: 'Manage theme, Email Login & language switcher',
     themeMode: 'Display Theme Mode',
     lightMode: 'Light Mode',
@@ -234,7 +234,7 @@ export const translations = {
     savedSuccessfully: 'Settings updated successfully',
 
     // Copyright Legal Text (Required)
-    copyrightFa: 'تمامی حقوق مادی و معنوی این سایت متعلق به ولتیار (wallet-yar) است.',
-    copyrightEn: 'All material and intellectual rights of this site belong to wallet-yar.',
+    copyrightFa: 'تمامی حقوق مادی و معنوی این سایت متعلق به کیف یار (kif-yar) است.',
+    copyrightEn: 'All material and intellectual rights of this site belong to kif-yar.',
   },
 };

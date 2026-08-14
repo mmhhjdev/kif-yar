@@ -31,12 +31,12 @@ export const MONTHLY_HISTORY_DATA: MonthlyHistory[] = [];
 export const INITIAL_DONGS: DongGroup[] = [];
 
 export const INITIAL_PROFILE: UserProfile = {
-  name: 'کاربر ولتیار',
-  email: 'user@walletyar.ir',
+  name: 'کاربر کیف یار',
+  email: 'user@kifyar.ir',
   avatarUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="%23059669"/><path d="M33 36 C33 22 67 22 67 36 C60 26 40 26 33 36 Z" fill="%23022c22"/><circle cx="50" cy="42" r="17" fill="%23a7f3d0"/><path d="M33 40 C33 58 40 64 50 64 C60 64 67 58 67 40 C65 57 35 57 33 40 Z" fill="%23022c22"/><path d="M42 47 Q50 51 58 47 Q50 49 42 47 Z" fill="%23022c22"/><path d="M20 88 C25 66 36 62 50 62 C64 62 75 66 80 88 Z" fill="%23d1fae5"/></svg>',
   monthlyGoal: 20000000,
   currentBalance: 0,
-  membershipTier: 'کاربر ولتیار',
+  membershipTier: 'کاربر کیف یار',
   currency: 'تومان',
 };
 
@@ -59,7 +59,7 @@ export const INITIAL_TICKETS: SupportTicket[] = [
     user_email: 'sara.moradi@gmail.com',
     user_name: 'سارا مرادی',
     subject: 'پیشنهاد افزودن قابلیت تقویم اقساط و چک‌ها',
-    message: 'با سلام، نرم‌افزار ولتیار فوق‌العاده کاربردیه. ممنون میشم امکان ثبت یادآور سررسید چک‌ها و اقساط وام رو هم اضافه کنید.',
+    message: 'با سلام، نرم‌افزار کیف یار فوق‌العاده کاربردیه. ممنون میشم امکان ثبت یادآور سررسید چک‌ها و اقساط وام رو هم اضافه کنید.',
     status: 'open',
     priority: 'low',
     category: 'انتقاد و پیشنهاد',

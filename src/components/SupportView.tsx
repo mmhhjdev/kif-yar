@@ -131,7 +131,7 @@ export const SupportView: React.FC<SupportViewProps> = ({
           ) : (
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
               <Headphones className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{isFa ? 'مرکز پشتیبانی برخط ولتیار' : 'WalletYar Online Support'}</span>
+              <span>{isFa ? 'مرکز پشتیبانی برخط کیف یار' : 'Kifyar Online Support'}</span>
             </div>
           )}
         </div>

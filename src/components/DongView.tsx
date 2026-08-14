@@ -139,7 +139,7 @@ export const DongView: React.FC<DongViewProps> = ({
         });
       }
 
-      text += `\nمحاسبه‌شده با اپلیکیشن ولتیار ⚡️`;
+      text += `\nمحاسبه‌شده با اپلیکیشن کیف یار ⚡️`;
       return text;
     } else {
       let text = `📋 **Group Bill Split: ${dong.title}**\n`;
@@ -162,7 +162,7 @@ export const DongView: React.FC<DongViewProps> = ({
         });
       }
 
-      text += `\nCalculated with WalletYar ⚡️`;
+      text += `\nCalculated with Kifyar ⚡️`;
       return text;
     }
   };

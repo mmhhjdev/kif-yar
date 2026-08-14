@@ -57,7 +57,7 @@ export default function App() {
           const user: AuthUser = {
             id: session.user.id,
             email: session.user.email || '',
-            name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'کاربر ولتیار',
+            name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'کاربر کیف یار',
             provider: (session.user.app_metadata?.provider as any) || 'google',
             isAuthenticated: true,
           };
@@ -76,7 +76,7 @@ export default function App() {
           const user: AuthUser = {
             id: session.user.id,
             email: session.user.email || '',
-            name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'کاربر ولتیار',
+            name: userMeta.full_name || userMeta.name || session.user.email?.split('@')[0] || 'کاربر کیف یار',
             provider: (session.user.app_metadata?.provider as any) || 'google',
             isAuthenticated: true,
           };

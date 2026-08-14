@@ -27,9 +27,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   const membershipText =
     lang === 'fa'
-      ? profile.membershipTier || 'کاربر ولتیار'
-      : profile.membershipTier === 'کاربر ولتیار' || profile.membershipTier === 'کاربر سطح طلایی VIP'
-      ? 'WalletYar User'
+      ? profile.membershipTier || 'کاربر کیف یار'
+      : profile.membershipTier === 'کاربر ولتیار' || profile.membershipTier === 'کاربر کیف یار' || profile.membershipTier === 'کاربر سطح طلایی VIP'
+      ? 'Kifyar User'
       : profile.membershipTier;
 
   const getTabTitle = () => {
@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'profile':
         return t.profileTitle;
       default:
-        return 'ولتیار | walletyar';
+        return 'کیف یار | kifyar';
     }
   };
 
@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Brand & Current Tab Title */}
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-600 text-white font-extrabold text-xl tracking-wider shadow-sm font-berlin">
-          W
+          K
         </div>
 
         <div>

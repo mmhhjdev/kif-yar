@@ -34,7 +34,7 @@ export const SupportTicketSubmit: React.FC<SupportTicketSubmitProps> = ({
 
   // Derive active user email & name directly from authentication/profile
   const activeUserEmail = authUser?.email || profile?.email || '';
-  const activeUserName = authUser?.name || profile?.name || 'کاربر ولتیار';
+  const activeUserName = authUser?.name || profile?.name || 'کاربر کیف یار';
   const isLoggedIn = Boolean(authUser?.isAuthenticated || authUser?.email || profile?.email);
 
   // Form states
@@ -64,7 +64,7 @@ export const SupportTicketSubmit: React.FC<SupportTicketSubmitProps> = ({
       return;
     }
 
-    const finalEmail = activeUserEmail.trim() || 'user@walletyar.ir';
+    const finalEmail = activeUserEmail.trim() || 'user@kifyar.ir';
 
     setIsLoading(true);
 
@@ -127,10 +127,10 @@ export const SupportTicketSubmit: React.FC<SupportTicketSubmitProps> = ({
           <h2 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2">
             {isFa ? (
               <span className="flex items-center gap-1.5">
-                ارسال تیکت پشتیبانی به تیم <span className="font-walletyar text-3xl font-normal text-emerald-200">ولتیار</span>
+                ارسال تیکت پشتیبانی به تیم <span className="font-walletyar text-3xl font-normal text-emerald-200">کیف یار</span>
               </span>
             ) : (
-              <span>Submit a Support Ticket to <span className="font-berlin text-emerald-200">WalletYar</span></span>
+              <span>Submit a Support Ticket to <span className="font-berlin text-emerald-200">Kifyar</span></span>
             )}
           </h2>
           <p className="text-xs sm:text-sm text-emerald-100/90 max-w-2xl leading-relaxed">

@@ -106,10 +106,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <KeyRound className="w-5 h-5 text-emerald-600 shrink-0" />
             {isFa ? (
               <span className="flex items-center gap-1.5">
-                ورود و ثبت‌نام در <span className="font-walletyar text-2xl text-emerald-600 dark:text-emerald-400">ولتیار</span>
+                ورود و ثبت‌نام در <span className="font-walletyar text-2xl text-emerald-600 dark:text-emerald-400">کیف یار</span>
               </span>
             ) : (
-              <span>Sign In & Register - <span className="font-berlin text-emerald-600">WalletYar</span></span>
+              <span>Sign In & Register - <span className="font-berlin text-emerald-600">Kifyar</span></span>
             )}
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -187,7 +187,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@walletyar.ir"
+                  placeholder="user@kifyar.ir"
                   dir="ltr"
                   className="w-full rtl:pr-3 rtl:pl-9 ltr:pl-9 ltr:pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 text-slate-900 dark:text-white text-xs outline-none text-start"
                 />

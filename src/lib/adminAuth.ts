@@ -1,6 +1,8 @@
-// List of authorized administrator emails for WalletYar support management
+// List of authorized administrator emails for Kifyar support management
 export const ADMIN_EMAILS: string[] = [
   'seyedmahanhejrati@gmail.com',
+  'admin@kifyar.ir',
+  'support@kifyar.ir',
   'admin@walletyar.ir',
   'support@walletyar.ir',
   'admin@gmail.com',

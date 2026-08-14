@@ -14,11 +14,11 @@ export const Footer: React.FC<FooterProps> = ({ lang }) => {
         {/* Brand Badge & Version */}
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-extrabold flex items-center justify-center text-xs font-berlin">
-            W
+            K
           </div>
           <span className="font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-            <span className="font-walletyar text-xl text-emerald-600 dark:text-emerald-400 font-normal leading-none">ولتیار</span>
-            <span className="font-berlin text-xs text-emerald-700 dark:text-emerald-300">WalletYar</span>
+            <span className="font-walletyar text-xl text-emerald-600 dark:text-emerald-400 font-normal leading-none">کیف یار</span>
+            <span className="font-berlin text-xs text-emerald-700 dark:text-emerald-300">Kifyar</span>
           </span>
           <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800">
             <Shield className="w-3 h-3 text-emerald-600" />
@@ -30,9 +30,9 @@ export const Footer: React.FC<FooterProps> = ({ lang }) => {
         <div className="space-y-1 text-center font-medium">
           <p dir="rtl" className="text-slate-700 dark:text-slate-300 font-bold">
             {lang === 'fa' ? (
-              <span>تمامی حقوق مادی و معنوی این سایت متعلق به <span className="font-walletyar text-sm text-emerald-600 dark:text-emerald-400 mx-1">ولتیار</span> (wallet-yar) است.</span>
+              <span>تمامی حقوق مادی و معنوی این سایت متعلق به <span className="font-walletyar text-sm text-emerald-600 dark:text-emerald-400 mx-1">کیف یار</span> (kif-yar) است.</span>
             ) : (
-              'All material and intellectual rights belong to WalletYar.'
+              'All material and intellectual rights belong to Kifyar.'
             )}
           </p>
         </div>

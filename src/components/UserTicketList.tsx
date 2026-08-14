@@ -84,7 +84,7 @@ export const UserTicketList: React.FC<UserTicketListProps> = ({
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {isFa
-                ? 'پاسخ کارشناسان پشتیبانی ولتیار مستقیماً در همین بخش قرار می‌گیرد.'
+                ? 'پاسخ کارشناسان پشتیبانی کیف یار مستقیماً در همین بخش قرار می‌گیرد.'
                 : 'Support team replies and updates will be displayed directly here in this panel.'}
             </p>
           </div>
@@ -241,7 +241,7 @@ export const UserTicketList: React.FC<UserTicketListProps> = ({
                             </div>
                             <div>
                               <span className="text-xs font-extrabold text-emerald-900 dark:text-emerald-200">
-                                {isFa ? 'پاسخ کارشناس پشتیبانی ولتیار' : 'Support Specialist Response'}
+                                {isFa ? 'پاسخ کارشناس پشتیبانی کیف یار' : 'Support Specialist Response'}
                               </span>
                               {ticket.updated_at && (
                                 <span className="text-[10px] text-emerald-700/80 dark:text-emerald-400 block">
@@ -268,7 +268,7 @@ export const UserTicketList: React.FC<UserTicketListProps> = ({
                           </h4>
                           <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
                             {isFa
-                              ? 'پیام شما به دست کارشناسان ولتیار رسیده است. به محض ارسال پاسخ، متن پاسخ در همین پنجره نمایش داده خواهد شد.'
+                              ? 'پیام شما به دست کارشناسان کیف یار رسیده است. به محض ارسال پاسخ، متن پاسخ در همین پنجره نمایش داده خواهد شد.'
                               : 'Your request is in our queue. Once our support team responds, the answer will appear right here.'}
                           </p>
                         </div>

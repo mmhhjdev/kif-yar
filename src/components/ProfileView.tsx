@@ -55,8 +55,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const t = translations[lang];
   const isFa = lang === 'fa';
   const initialName =
-    lang === 'en' && (profile.name === 'کاربر ولتیار' || !profile.name)
-      ? 'WalletYar User'
+    lang === 'en' && (profile.name === 'کاربر کیف یار' || profile.name === 'کاربر ولتیار' || !profile.name)
+      ? 'Kifyar User'
       : profile.name;
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState(profile.email);
@@ -74,10 +74,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   } : null);
 
   useEffect(() => {
-    if (lang === 'en' && name === 'کاربر ولتیار') {
-      setName('WalletYar User');
-    } else if (lang === 'fa' && name === 'WalletYar User') {
-      setName('کاربر ولتیار');
+    if (lang === 'en' && (name === 'کاربر کیف یار' || name === 'کاربر ولتیار')) {
+      setName('Kifyar User');
+    } else if (lang === 'fa' && (name === 'Kifyar User' || name === 'WalletYar User')) {
+      setName('کاربر کیف یار');
     }
   }, [lang]);
 
