@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: 'mrt_abduollah';
+  src: local('mrt_abduollah'), local('MRT_Abduollah'), local('MRT_Abduollah_0'), local('B Abdollah'), local('Abdoullah'),
+       url('https://cdn.fontcdn.ir/Font/Persian/MRT/MRT_Abduollah.woff2') format('woff2'),
+       url('https://cdn.fontcdn.ir/Font/Persian/MRT/MRT_Abduollah.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MRT_Abduollah';
+  src: local('MRT_Abduollah'), local('mrt_abduollah'), local('MRT_Abduollah_0'), local('B Abdollah'), local('Abdoullah'),
+       url('https://cdn.fontcdn.ir/Font/Persian/MRT/MRT_Abduollah.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --font-vazirmatn: 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-berlin: 'Berlin Sans FB', 'Berlin', 'Trebuchet MS', 'Vazirmatn', sans-serif;
+    --font-abduollah: 'mrt_abduollah', 'MRT_Abduollah', 'B Abdollah', 'Lalezar', 'Vazirmatn', sans-serif;
+    --font-walletyar: 'Lalezar', 'Katibeh', 'mrt_abduollah', 'MRT_Abduollah', 'Aref Ruqaa', 'Reem Kufi', cursive, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-vazirmatn);
+    background-color: #F8FAFC;
+    color: #0F172A;
+    overflow-x: hidden;
+  }
+
+  .dark body {
+    background-color: #0B0F17;
+    color: #F8FAFC;
+  }
+}
+
+/* Custom Font Family Utility Classes */
+.font-berlin {
+  font-family: var(--font-berlin);
+}
+
+.font-abduollah, .font-mrt-abduollah {
+  font-family: var(--font-abduollah);
+}
+
+.font-walletyar {
+  font-family: var(--font-walletyar);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  display: inline-block;
+  line-height: 1.15;
+}
+
+.font-lalezar {
+  font-family: 'Lalezar', cursive, sans-serif;
+}
+
+.font-katibeh {
+  font-family: 'Katibeh', cursive, sans-serif;
+}
+
+.font-vazir {
+  font-family: var(--font-vazirmatn);
+}
+
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Subtle Modern Light & Dark Fintech Cards */
+.card-flat {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease-in-out;
+}
+
+.dark .card-flat {
+  background-color: #111827;
+  border-color: #1F2937;
+}
+
+.card-flat-hover:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+}
+
+.dark .card-flat-hover:hover {
+  border-color: #374151;
+}
+
+.card-emerald-glow {
+  box-shadow: 0 4px 20px -2px rgba(5, 150, 105, 0.12);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #0F172A;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
