@@ -1,7 +1,7 @@
 // List of authorized administrator emails for WalletYar support management
 export const ADMIN_EMAILS: string[] = [
   'seyedmahanhejrati@gmail.com',
-  'mahan.hejrati91@gmail.com',
+  'admin@walletyar.ir',
   'support@walletyar.ir',
   'admin@gmail.com',
 ];
