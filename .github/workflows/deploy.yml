@@ -26,17 +26,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+      # این بخش بسیار مهم است - استفاده از Bun
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
 
+      # نصب وابستگی‌ها با Bun
       - name: Install dependencies
-        run: npm install
+        run: bun install
 
+      # بیلد کردن پروژه با Bun
       - name: Build Vite static assets
-        run: npx vite build
+        run: bun run build
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
