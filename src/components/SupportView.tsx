@@ -14,6 +14,12 @@ interface SupportViewProps {
   onOpenTicketModal: () => void;
 }
 
+// لیست ایمیل‌های ادمین (می‌توانید همگام با AppContext داشته باشید)
+const ADMIN_EMAILS = [
+  'seyedmahanhejrati@gmail.com',
+  'mahan.hejrati91@gmail.com',
+];
+
 export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) => {
   const {
     tickets,
@@ -23,11 +29,15 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
     updateTicketStatus,
     adminMode,
     setAdminMode,
+    user, // دریافت اطلاعات کاربر جاری از Context
   } = useApp();
 
   const [replyText, setReplyText] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | TicketStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // بررسی اینکه آیا کاربر جاری ادمین است یا خیر
+  const isAdminUser = user && ADMIN_EMAILS.includes(user.email);
 
   // Filtered tickets
   const filteredTickets = tickets.filter((t) => {
@@ -100,7 +110,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
             <h2 className="font-cairo text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               مرکز پشتیبانی و تیکت‌های <span className="font-brand text-emerald-800 dark:text-emerald-400">کیفیار</span>
             </h2>
-            {adminMode && (
+            {isAdminUser && adminMode && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-cairo font-bold bg-emerald-700 text-white flex items-center gap-1 shadow-xs">
                 <Shield className="w-3 h-3" />
                 پنل مدیریت پشتیبان
@@ -113,19 +123,21 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
         </div>
 
         <div className="flex items-center gap-2.5 font-cairo">
-          {/* Admin Mode Switch Button */}
-          <button
-            id="toggle-admin-support-mode-btn"
-            onClick={() => setAdminMode(!adminMode)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 cursor-pointer ${
-              adminMode
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-[#15231C] dark:text-emerald-300 dark:border-emerald-800'
-                : 'bg-white dark:bg-[#0F1512] text-zinc-700 dark:text-zinc-300 border-[#E2E8E4] dark:border-[#1A2621] hover:bg-emerald-50/50 dark:hover:bg-[#16201B]'
-            }`}
-          >
-            <Shield className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-            <span>{adminMode ? 'خروج از پنل پشتیبان' : 'سوئیچ به پنل پشتیبان (Admin)'}</span>
-          </button>
+          {/* Admin Mode Switch Button - Only visible for admin emails */}
+          {isAdminUser && (
+            <button
+              id="toggle-admin-support-mode-btn"
+              onClick={() => setAdminMode(!adminMode)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+                adminMode
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-[#15231C] dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-white dark:bg-[#0F1512] text-zinc-700 dark:text-zinc-300 border-[#E2E8E4] dark:border-[#1A2621] hover:bg-emerald-50/50 dark:hover:bg-[#16201B]'
+              }`}
+            >
+              <Shield className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+              <span>{adminMode ? 'خروج از پنل پشتیبان' : 'سوئیچ به پنل پشتیبان (Admin)'}</span>
+            </button>
+          )}
 
           <button
             id="open-new-ticket-btn"
@@ -139,7 +151,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
       </div>
 
       {/* Admin Mode Notice Banner */}
-      {adminMode && (
+      {isAdminUser && adminMode && (
         <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-[#14221C] border border-emerald-200 dark:border-emerald-900/60 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-emerald-950 dark:text-emerald-200">
             <Shield className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
@@ -288,7 +300,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
 
                   {/* Status update controls (especially useful in Admin mode) */}
                   <div className="flex items-center gap-1.5">
-                    {adminMode && (
+                    {isAdminUser && adminMode && (
                       <select
                         value={activeTicket.status}
                         onChange={(e) => updateTicketStatus(activeTicket.id, e.target.value as TicketStatus)}
@@ -377,7 +389,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder={
-                    adminMode
+                    isAdminUser && adminMode
                       ? 'ارسال پاسخ به عنوان پشتیبان رسمی کیفیار...'
                       : 'پاسخ یا توضیحات تکمیلی خود را بنویسید...'
                   }
