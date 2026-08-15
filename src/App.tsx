@@ -16,8 +16,10 @@ import { SettingsView } from './components/SettingsView';
 import { TransactionModal } from './components/TransactionModal';
 import { ReminderModal } from './components/ReminderModal';
 import { TicketModal } from './components/TicketModal';
+import { AvatarModal } from './components/AvatarModal';
+import { AuthModal } from './components/AuthModal';
 import { Transaction } from './types';
-import { Plus, ShieldCheck, Heart } from 'lucide-react';
+import { Plus, ShieldCheck } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const {
@@ -26,6 +28,8 @@ const MainLayout: React.FC = () => {
     updateTransaction,
     addNotification,
     createTicket,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
   } = useApp();
 
   // Modal States
@@ -33,6 +37,7 @@ const MainLayout: React.FC = () => {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   const handleOpenAddTxModal = () => {
     setEditingTx(null);
@@ -104,7 +109,7 @@ const MainLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* Modals */}
+      {/* Standard Modals */}
       <TransactionModal
         isOpen={isTxModalOpen}
         onClose={() => {
@@ -147,6 +152,17 @@ const MainLayout: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Global Overlays & Modals (Placed at the root highest layer to prevent layout collapsing) */}
+      <AvatarModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 };

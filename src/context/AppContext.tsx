@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   UserProfile,
   Transaction,
@@ -6,15 +6,8 @@ import {
   Ticket,
   TicketMessage,
   ActiveTab,
-  TransactionType,
   TransactionCategory,
 } from '../types';
-import {
-  INITIAL_USER,
-  INITIAL_TRANSACTIONS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_TICKETS,
-} from '../data/initialData';
 import { getSupabaseClient } from '../lib/supabase';
 import { MALE_AVATAR_SVG } from '../utils/avatars';
 
@@ -89,8 +82,24 @@ const STORAGE_KEYS = {
   THEME: 'kefyar_theme_mode',
 };
 
+const ADMIN_EMAILS = [
+  'seyedmahanhejrati@gmail.com',
+  'mahan.hejrati91@gmail.com',
+];
+
+const EMPTY_USER: UserProfile = {
+  id: '',
+  email: '',
+  full_name: '',
+  avatar_url: MALE_AVATAR_SVG,
+  monthly_budget_cap: 0,
+  currency: 'تومان',
+  theme_preference: 'dark',
+  created_at: '',
+  role: 'user',
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 1. Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
       const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
@@ -114,12 +123,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
-  // 2. Navigation State
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [adminMode, setAdminMode] = useState<boolean>(false);
   const [activeSupportTicketId, setActiveSupportTicketId] = useState<string | null>(null);
 
-  // 3. Authentication & Session State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
@@ -127,20 +134,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.error(e);
     }
-    return true; // Default logged in for initial smooth start
+    return false;
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // 4. User Profile State (Strictly NO phone field)
   const [user, setUser] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.USER);
-      if (saved) return JSON.parse(saved);
+      if (saved && isAuthenticated) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_USER;
+    return EMPTY_USER;
   });
 
   const updateUserProfile = async (updated: Partial<UserProfile>) => {
@@ -150,9 +156,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
 
-    // Sync to Supabase if connected
     const supabase = getSupabaseClient();
-    if (supabase) {
+    if (supabase && user.id) {
       try {
         await supabase.from('users').upsert({
           id: user.id,
@@ -173,12 +178,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loginWithEmail = async (email: string, _password?: string, fullName?: string, avatarUrl?: string): Promise<boolean> => {
     const cleanEmail = email.trim().toLowerCase();
     const derivedName = fullName?.trim() || (cleanEmail === user.email ? user.full_name : cleanEmail.split('@')[0]);
+    const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
+
     const updatedUser: UserProfile = {
       ...user,
+      id: user.id || `usr-${Date.now()}`,
       email: cleanEmail,
       full_name: derivedName,
       avatar_url: avatarUrl || user.avatar_url || MALE_AVATAR_SVG,
-      role: cleanEmail.includes('admin') ? 'admin' : user.role || 'user',
+      role: isAdmin ? 'admin' : 'user',
     };
 
     setUser(updatedUser);
@@ -190,16 +198,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const registerWithEmail = async (email: string, fullName: string, _password?: string, avatarUrl?: string): Promise<boolean> => {
     const cleanEmail = email.trim().toLowerCase();
+    const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
+
     const newUser: UserProfile = {
       id: `usr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       email: cleanEmail,
       full_name: fullName.trim(),
       avatar_url: avatarUrl || MALE_AVATAR_SVG,
-      monthly_budget_cap: 35000000,
+      monthly_budget_cap: 0,
       currency: 'تومان',
       theme_preference: isDarkMode ? 'dark' : 'light',
       created_at: new Date().toISOString(),
-      role: 'user',
+      role: isAdmin ? 'admin' : 'user',
     };
 
     setUser(newUser);
@@ -212,26 +222,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     setIsAuthenticated(false);
     localStorage.setItem(STORAGE_KEYS.AUTH, 'false');
+    resetToInitialData();
   };
 
-  // 4. Transactions State
+  // Transactions State (Default to Empty Array)
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      if (saved) return JSON.parse(saved);
+      if (saved && isAuthenticated) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_TRANSACTIONS;
+    return [];
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+      if (isAuthenticated) {
+        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+      }
     } catch (e) {
       console.error(e);
     }
-  }, [transactions]);
+  }, [transactions, isAuthenticated]);
 
   const addTransaction = (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {
     const newTx: Transaction = {
@@ -242,8 +255,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setTransactions((prev) => [newTx, ...prev]);
 
-    // Check if adding this expense pushes monthly expenses over budget cap
-    if (tx.type === 'expense') {
+    if (tx.type === 'expense' && user.monthly_budget_cap > 0) {
       const currentMonthExpenses = transactions
         .filter((t) => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0) + tx.amount;
@@ -252,7 +264,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addNotification({
           type: 'budget_alert',
           title: 'هشدار عبور از سقف بودجه ماهانه',
-          message: `مجموع هزینه‌های شما با ثبت این تراکنش به بیش از سقف بودجه تعیین شده (${user.monthly_budget_cap.toLocaleString()} تومان) رسید.`,
+          message: `مجموع هزینه‌های شما با ثبت این تراکنش به بیش از سقف بودجه تعیین شده رسید.`,
           amount: currentMonthExpenses,
           priority: 'urgent',
         });
@@ -268,24 +280,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // 5. Notifications & Alarms State
+  // Notifications State (Default to Empty Array)
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-      if (saved) return JSON.parse(saved);
+      if (saved && isAuthenticated) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_NOTIFICATIONS;
+    return [];
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+      if (isAuthenticated) {
+        localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+      }
     } catch (e) {
       console.error(e);
     }
-  }, [notifications]);
+  }, [notifications, isAuthenticated]);
 
   const addNotification = (item: Omit<NotificationItem, 'id' | 'user_id' | 'created_at' | 'is_read'>) => {
     const newNotif: NotificationItem = {
@@ -321,28 +335,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter((n) => !n.is_read).length;
   }, [notifications]);
 
-  // 6. Support Tickets State
+  // Support Tickets State (Default to Empty Array)
   const [tickets, setTickets] = useState<Ticket[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
-      if (saved) return JSON.parse(saved);
+      if (saved && isAuthenticated) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_TICKETS;
+    return [];
   });
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
+      if (isAuthenticated) {
+        localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
+      }
     } catch (e) {
       console.error(e);
     }
-  }, [tickets]);
+  }, [tickets, isAuthenticated]);
 
-  // Keep selected ticket synchronized with latest state
   useEffect(() => {
     if (selectedTicket) {
       const updated = tickets.find((t) => t.id === selectedTicket.id);
@@ -388,13 +403,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setTickets((prev) => [newTicket, ...prev]);
     setSelectedTicket(newTicket);
-
-    addNotification({
-      type: 'system',
-      title: 'ثبت تیکت پشتیبانی جدید',
-      message: `تیکت «${subject}» با موفقیت در سیستم ثبت گردید و در صف بررسی کارشناسان کیفیار قرار گرفت.`,
-      priority: 'normal',
-    });
   };
 
   const addTicketMessage = (ticketId: string, content: string, asAdmin: boolean = false) => {
@@ -422,15 +430,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return t;
       })
     );
-
-    if (asAdmin) {
-      addNotification({
-        type: 'system',
-        title: 'پاسخ جدید به تیکت پشتیبانی',
-        message: `پشتیبان کیفیار به تیکت شما پاسخ داد: "${content.slice(0, 60)}..."`,
-        priority: 'high',
-      });
-    }
   };
 
   const updateTicketStatus = (ticketId: string, status: Ticket['status']) => {
@@ -450,7 +449,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 7. Computed Stats
   const totalIncome = useMemo(() => {
     return transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   }, [transactions]);
@@ -461,7 +459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const netBalance = useMemo(() => totalIncome - totalExpense, [totalIncome, totalExpense]);
 
-  const monthlyBudgetCap = user.monthly_budget_cap || 35000000;
+  const monthlyBudgetCap = user.monthly_budget_cap || 0;
 
   const budgetUtilizationPercent = useMemo(() => {
     if (!monthlyBudgetCap || monthlyBudgetCap <= 0) return 0;
@@ -479,15 +477,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [transactions]);
 
   const resetToInitialData = () => {
-    setUser(INITIAL_USER);
-    setTransactions(INITIAL_TRANSACTIONS);
-    setNotifications(INITIAL_NOTIFICATIONS);
-    setTickets(INITIAL_TICKETS);
+    setUser(EMPTY_USER);
+    setTransactions([]);
+    setNotifications([]);
+    setTickets([]);
     setSelectedTicket(null);
     localStorage.removeItem(STORAGE_KEYS.USER);
     localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
     localStorage.removeItem(STORAGE_KEYS.TICKETS);
+    localStorage.setItem(STORAGE_KEYS.AUTH, 'false');
+    setIsAuthenticated(false);
   };
 
   return (

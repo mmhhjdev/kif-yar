@@ -9,10 +9,9 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { DEFAULT_AVATARS, MALE_AVATAR_SVG, FEMALE_AVATAR_SVG } from '../utils/avatars';
+import { DEFAULT_AVATARS, MALE_AVATAR_SVG } from '../utils/avatars';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -20,7 +19,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { loginWithEmail, registerWithEmail, user } = useApp();
+  const { loginWithEmail, registerWithEmail } = useApp();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
   const [email, setEmail] = useState('');
@@ -84,22 +83,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleQuickDemoLogin = async (demoEmail: string, name: string) => {
-    setError(null);
-    setLoading(true);
-    await loginWithEmail(demoEmail, 'demo123', name);
-    setSuccessMsg(`ورود سریع به عنوان ${name} انجام شد.`);
-    setTimeout(() => {
-      setLoading(false);
-      onClose();
-    }, 600);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs font-vazir">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs font-vazir overflow-y-auto">
       <div
         id="auth-modal-card"
-        className="w-full max-w-md bg-white dark:bg-[#0F1512] rounded-2xl shadow-2xl border border-[#E2E8E4] dark:border-[#1A2621] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-md bg-white dark:bg-[#0F1512] rounded-2xl shadow-2xl border border-[#E2E8E4] dark:border-[#1A2621] overflow-hidden my-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8E4] dark:border-[#1A2621] bg-emerald-50/40 dark:bg-[#121F19]">
@@ -117,6 +105,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-[#16221D] transition cursor-pointer"
           >
@@ -283,29 +272,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </>
             )}
           </button>
-
-          {/* Fast Demo login options */}
-          <div className="pt-3 border-t border-[#E2E8E4] dark:border-[#1A2621] space-y-2">
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block text-center font-vazir">
-              یا ورود سریع با حساب‌های نمونه:
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('seyedmahanhejrati@gmail.com', 'سید ماهان هجرتی')}
-                className="py-1.5 px-2 rounded-lg bg-zinc-100 dark:bg-[#16221D] hover:bg-emerald-50 dark:hover:bg-[#1C2F25] text-zinc-800 dark:text-zinc-200 text-[11px] font-cairo font-bold transition border border-[#E2E8E4] dark:border-[#1F2E27] truncate cursor-pointer"
-              >
-                حساب ماهان هجرتی
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('demo.user@kifyar.ir', 'کاربر نمونه کیفیار')}
-                className="py-1.5 px-2 rounded-lg bg-zinc-100 dark:bg-[#16221D] hover:bg-emerald-50 dark:hover:bg-[#1C2F25] text-zinc-800 dark:text-zinc-200 text-[11px] font-cairo font-bold transition border border-[#E2E8E4] dark:border-[#1F2E27] truncate cursor-pointer"
-              >
-                کاربر مهمان نمونه
-              </button>
-            </div>
-          </div>
         </form>
       </div>
     </div>
