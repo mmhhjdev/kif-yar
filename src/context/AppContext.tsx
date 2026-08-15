@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   UserProfile,
   Transaction,
@@ -12,35 +12,29 @@ import { getSupabaseClient } from '../lib/supabase';
 import { MALE_AVATAR_SVG } from '../utils/avatars';
 
 interface AppContextType {
-  // Navigation & View
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   adminMode: boolean;
   setAdminMode: (enabled: boolean) => void;
 
-  // Theme
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 
-  // Authentication & Session
   isAuthenticated: boolean;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  loginWithEmail: (email: string, password?: string, fullName?: string, avatarUrl?: string) => Promise<boolean>;
+  loginWithEmail: (email: string, password?: string) => Promise<boolean>;
   registerWithEmail: (email: string, fullName: string, password?: string, avatarUrl?: string) => Promise<boolean>;
   logout: () => void;
 
-  // User Profile
   user: UserProfile;
   updateUserProfile: (profile: Partial<UserProfile>) => void;
 
-  // Transactions
   transactions: Transaction[];
   addTransaction: (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => void;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
 
-  // Notifications & Alarms
   notifications: NotificationItem[];
   addNotification: (item: Omit<NotificationItem, 'id' | 'user_id' | 'created_at' | 'is_read'>) => void;
   markNotificationAsRead: (id: string) => void;
@@ -49,15 +43,13 @@ interface AppContextType {
   deleteNotification: (id: string) => void;
   unreadNotificationsCount: number;
 
-  // Tickets
   tickets: Ticket[];
   selectedTicket: Ticket | null;
   setSelectedTicket: (ticket: Ticket | null) => void;
-  createTicket: (ticket: { subject: string; department: Ticket['department']; priority: Ticket['priority']; initialMessage: string }) => void;
-  addTicketMessage: (ticketId: string, content: string, asAdmin?: boolean) => void;
+  createTicket: (ticket: { subject: string; department: Ticket['department']; priority: Ticket['priority']; initialMessage: string }) => Promise<void>;
+  addTicketMessage: (ticketId: string, content: string, asAdmin?: boolean) => Promise<void>;
   updateTicketStatus: (ticketId: string, status: Ticket['status']) => void;
 
-  // Analytics & Summary Computed Stats
   totalIncome: number;
   totalExpense: number;
   netBalance: number;
@@ -65,7 +57,6 @@ interface AppContextType {
   budgetUtilizationPercent: number;
   expensesByCategory: Record<TransactionCategory, number>;
 
-  // Reset & Helpers
   resetToInitialData: () => void;
   activeSupportTicketId: string | null;
   navigateToSupportWithTicket: (ticketId?: string) => void;
@@ -80,6 +71,7 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'kefyar_notifications_data',
   TICKETS: 'kefyar_tickets_data',
   THEME: 'kefyar_theme_mode',
+  REGISTERED_USERS: 'kefyar_registered_users_db',
 };
 
 const ADMIN_EMAILS = [
@@ -175,48 +167,140 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const loginWithEmail = async (email: string, _password?: string, fullName?: string, avatarUrl?: string): Promise<boolean> => {
+  const loginWithEmail = async (email: string, password?: string): Promise<boolean> => {
     const cleanEmail = email.trim().toLowerCase();
-    const derivedName = fullName?.trim() || (cleanEmail === user.email ? user.full_name : cleanEmail.split('@')[0]);
-    const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
+    const supabase = getSupabaseClient();
 
-    const updatedUser: UserProfile = {
-      ...user,
-      id: user.id || `usr-${Date.now()}`,
-      email: cleanEmail,
-      full_name: derivedName,
-      avatar_url: avatarUrl || user.avatar_url || MALE_AVATAR_SVG,
-      role: isAdmin ? 'admin' : 'user',
-    };
+    if (supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password || '',
+      });
+      if (error) {
+        throw new Error('ایمیل یا رمز عبور اشتباه است، یا کاربری با این مشخصات وجود ندارد.');
+      }
+      if (data.user) {
+        const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
+        const loggedUser: UserProfile = {
+          id: data.user.id,
+          email: cleanEmail,
+          full_name: data.user.user_metadata?.full_name || cleanEmail.split('@')[0],
+          avatar_url: data.user.user_metadata?.avatar_url || MALE_AVATAR_SVG,
+          monthly_budget_cap: 0,
+          currency: 'تومان',
+          theme_preference: isDarkMode ? 'dark' : 'light',
+          created_at: data.user.created_at,
+          role: isAdmin ? 'admin' : 'user',
+        };
+        setUser(loggedUser);
+        setIsAuthenticated(true);
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
+        localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+        return true;
+      }
+    }
 
-    setUser(updatedUser);
-    setIsAuthenticated(true);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
-    localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-    return true;
+    try {
+      const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.REGISTERED_USERS);
+      const registeredUsers: Array<UserProfile & { pass?: string }> = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
+      
+      const foundUser = registeredUsers.find((u) => u.email === cleanEmail);
+      if (!foundUser) {
+        throw new Error('کاربری با این ایمیل ثبت‌نام نکرده است.');
+      }
+
+      if (password && foundUser.pass && foundUser.pass !== password) {
+        throw new Error('رمز عبور وارد شده نادرست است.');
+      }
+
+      const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
+      const activeUser: UserProfile = {
+        id: foundUser.id,
+        email: foundUser.email,
+        full_name: foundUser.full_name,
+        avatar_url: foundUser.avatar_url,
+        monthly_budget_cap: foundUser.monthly_budget_cap || 0,
+        currency: foundUser.currency || 'تومان',
+        theme_preference: foundUser.theme_preference || 'dark',
+        created_at: foundUser.created_at,
+        role: isAdmin ? 'admin' : 'user',
+      };
+
+      setUser(activeUser);
+      setIsAuthenticated(true);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
+      localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+      return true;
+    } catch (err: any) {
+      throw err;
+    }
   };
 
-  const registerWithEmail = async (email: string, fullName: string, _password?: string, avatarUrl?: string): Promise<boolean> => {
+  const registerWithEmail = async (email: string, fullName: string, password?: string, avatarUrl?: string): Promise<boolean> => {
     const cleanEmail = email.trim().toLowerCase();
-    const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
+    const supabase = getSupabaseClient();
 
-    const newUser: UserProfile = {
-      id: `usr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      email: cleanEmail,
-      full_name: fullName.trim(),
-      avatar_url: avatarUrl || MALE_AVATAR_SVG,
-      monthly_budget_cap: 0,
-      currency: 'تومان',
-      theme_preference: isDarkMode ? 'dark' : 'light',
-      created_at: new Date().toISOString(),
-      role: isAdmin ? 'admin' : 'user',
-    };
+    if (supabase) {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: password || '',
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            avatar_url: avatarUrl || MALE_AVATAR_SVG,
+          }
+        }
+      });
+      if (error) {
+        throw new Error(error.message || 'خطا در ثبت‌نام با ایمیل.');
+      }
+    }
 
-    setUser(newUser);
-    setIsAuthenticated(true);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-    localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-    return true;
+    try {
+      const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.REGISTERED_USERS);
+      const registeredUsers: Array<UserProfile & { pass?: string }> = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
+
+      if (registeredUsers.some((u) => u.email === cleanEmail)) {
+        throw new Error('این ایمیل قبلاً ثبت‌نام شده است.');
+      }
+
+      const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
+      const newUser: UserProfile & { pass?: string } = {
+        id: `usr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        email: cleanEmail,
+        full_name: fullName.trim(),
+        avatar_url: avatarUrl || MALE_AVATAR_SVG,
+        monthly_budget_cap: 0,
+        currency: 'تومان',
+        theme_preference: isDarkMode ? 'dark' : 'light',
+        created_at: new Date().toISOString(),
+        role: isAdmin ? 'admin' : 'user',
+        pass: password,
+      };
+
+      registeredUsers.push(newUser);
+      localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(registeredUsers));
+
+      const activeUser: UserProfile = {
+        id: newUser.id,
+        email: newUser.email,
+        full_name: newUser.full_name,
+        avatar_url: newUser.avatar_url,
+        monthly_budget_cap: newUser.monthly_budget_cap,
+        currency: newUser.currency,
+        theme_preference: newUser.theme_preference,
+        created_at: newUser.created_at,
+        role: newUser.role,
+      };
+
+      setUser(activeUser);
+      setIsAuthenticated(true);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
+      localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+      return true;
+    } catch (err: any) {
+      throw err;
+    }
   };
 
   const logout = () => {
@@ -225,7 +309,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     resetToInitialData();
   };
 
-  // Transactions State (Default to Empty Array)
+  // Transactions State
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
@@ -280,7 +364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Notifications State (Default to Empty Array)
+  // Notifications State
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
@@ -335,7 +419,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter((n) => !n.is_read).length;
   }, [notifications]);
 
-  // Support Tickets State (Default to Empty Array)
+  // Support Tickets State & Supabase Integration Sync
   const [tickets, setTickets] = useState<Ticket[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
@@ -347,6 +431,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  // بارگذاری تیکت‌ها از Supabase هنگام ورود یا تغییر حالت ادمین/کاربر
+  const fetchTicketsFromSupabase = useCallback(async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase || !isAuthenticated) return;
+
+    try {
+      let query = supabase.from('tickets').select('*, messages:ticket_messages(*)');
+      
+      // اگر ادمین نیست، فقط تیکت‌های خود کاربر را بیاور
+      if (user.role !== 'admin' && !adminMode) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query.order('updated_at', { ascending: false });
+      if (!error && data) {
+        setTickets(data as Ticket[]);
+      }
+    } catch (err) {
+      console.warn('Could not fetch tickets from Supabase:', err);
+    }
+  }, [isAuthenticated, user.id, user.role, adminMode]);
+
+  useEffect(() => {
+    fetchTicketsFromSupabase();
+  }, [fetchTicketsFromSupabase]);
 
   useEffect(() => {
     try {
@@ -363,9 +473,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const updated = tickets.find((t) => t.id === selectedTicket.id);
       if (updated) setSelectedTicket(updated);
     }
-  }, [tickets]);
+  }, [tickets, selectedTicket]);
 
-  const createTicket = ({
+  const createTicket = async ({
     subject,
     department,
     priority,
@@ -377,6 +487,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     initialMessage: string;
   }) => {
     const ticketId = `tkt-${Date.now()}`;
+    const nowIso = new Date().toISOString();
+
     const newMsg: TicketMessage = {
       id: `msg-${Date.now()}`,
       ticket_id: ticketId,
@@ -384,7 +496,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sender_name: user.full_name,
       sender_role: 'user',
       content: initialMessage,
-      created_at: new Date().toISOString(),
+      created_at: nowIso,
     };
 
     const newTicket: Ticket = {
@@ -396,16 +508,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       department,
       priority,
       status: 'open',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
       messages: [newMsg],
     };
 
     setTickets((prev) => [newTicket, ...prev]);
     setSelectedTicket(newTicket);
+
+    // ارسال به Supabase جهت دسترسی ادمین در پنل پشتیبانی
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('tickets').insert({
+          id: ticketId,
+          user_id: user.id,
+          user_name: user.full_name,
+          user_email: user.email,
+          subject,
+          department,
+          priority,
+          status: 'open',
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+
+        await supabase.from('ticket_messages').insert({
+          id: newMsg.id,
+          ticket_id: ticketId,
+          sender_id: user.id,
+          sender_name: user.full_name,
+          sender_role: 'user',
+          content: initialMessage,
+          created_at: nowIso,
+        });
+      } catch (err) {
+        console.warn('Could not sync created ticket to Supabase:', err);
+      }
+    }
   };
 
-  const addTicketMessage = (ticketId: string, content: string, asAdmin: boolean = false) => {
+  const addTicketMessage = async (ticketId: string, content: string, asAdmin: boolean = false) => {
+    const nowIso = new Date().toISOString();
     const newMsg: TicketMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       ticket_id: ticketId,
@@ -413,7 +557,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sender_name: asAdmin ? 'پشتیبان ارشد کیفیار' : user.full_name,
       sender_role: asAdmin ? 'admin' : 'user',
       content,
-      created_at: new Date().toISOString(),
+      created_at: nowIso,
     };
 
     setTickets((prev) =>
@@ -423,19 +567,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return {
             ...t,
             status: nextStatus,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
             messages: [...t.messages, newMsg],
           };
         }
         return t;
       })
     );
+
+    // همگام‌سازی پیام جدید با دیتابیس Supabase
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        const nextStatus = asAdmin ? 'resolved' : 'in_progress';
+        await supabase.from('ticket_messages').insert({
+          id: newMsg.id,
+          ticket_id: ticketId,
+          sender_id: newMsg.sender_id,
+          sender_name: newMsg.sender_name,
+          sender_role: newMsg.sender_role,
+          content,
+          created_at: nowIso,
+        });
+
+        await supabase.from('tickets').update({
+          status: nextStatus,
+          updated_at: nowIso,
+        }).eq('id', ticketId);
+      } catch (err) {
+        console.warn('Could not sync ticket message to Supabase:', err);
+      }
+    }
   };
 
-  const updateTicketStatus = (ticketId: string, status: Ticket['status']) => {
+  const updateTicketStatus = async (ticketId: string, status: Ticket['status']) => {
+    const nowIso = new Date().toISOString();
     setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status, updated_at: new Date().toISOString() } : t))
+      prev.map((t) => (t.id === ticketId ? { ...t, status, updated_at: nowIso } : t))
     );
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.from('tickets').update({
+          status,
+          updated_at: nowIso,
+        }).eq('id', ticketId);
+      } catch (err) {
+        console.warn('Could not update ticket status in Supabase:', err);
+      }
+    }
   };
 
   const navigateToSupportWithTicket = (ticketId?: string) => {
