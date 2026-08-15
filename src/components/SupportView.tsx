@@ -413,5 +413,10 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
         </div>
       </div>
     </div>
+
+
+
+
+
   );
 };
