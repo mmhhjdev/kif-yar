@@ -1,8 +1,6 @@
 {
-  "name": "walletyar",
-  "description": "kifyar (کیف یار) - مدیریت هوشمند منابع مالی، بودجه‌بندی، دنگ گروهی و تحلیل هوش مصنوعی",
+  "name": "کیفیار (kifyar)",
+  "description": "سامانه مدیریت مالی و حسابداری شخصی کیفیار (kifyar) با طراحی حرفه‌ای سبز و سفید/مشکی، فونت کایرو و وزیرمتن، و معماری سوپابیس",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

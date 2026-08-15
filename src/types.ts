@@ -1,117 +1,99 @@
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'expense' | 'income';
 
-export type CategoryId = 
-  | 'housing'
-  | 'food'
-  | 'transport'
-  | 'investment'
-  | 'entertainment'
-  | 'bills'
-  | 'health'
-  | 'shopping'
-  | 'salary'
-  | 'freelance'
-  | 'other';
+export type TransactionCategory =
+  | 'خوراک و رستوران'
+  | 'مسکن و اجاره'
+  | 'حمل‌ونقل و خودرو'
+  | 'خرید و پوشاک'
+  | 'سرگرمی و تفریح'
+  | 'سلامت و درمان'
+  | 'قبوض و شارژ'
+  | 'آموزش و کتاب'
+  | 'حقوق و دستمزد'
+  | 'سرمایه‌گذاری و پس‌انداز'
+  | 'کسب‌وکار و فروش'
+  | 'سایر و متفرقه';
 
-export interface Category {
-  id: CategoryId;
-  nameFa: string;
-  nameEn: string;
-  type: TransactionType | 'both';
+export interface Transaction {
+  id: string;
+  user_id: string;
+  type: TransactionType;
+  amount: number; // in Tomans
+  category: TransactionCategory;
+  date: string; // YYYY-MM-DD or Persian Date string
+  description: string;
+  account: 'کارت اصلی' | 'حساب پس‌انداز' | 'کیف پول نقد' | 'کارت تنخواه';
+  tags?: string[];
+  created_at: string;
+}
+
+export type NotificationType =
+  | 'budget_alert'   // هشدار سقف بودجه
+  | 'debt_reminder'  // یادآوری پرداخت دنگ و بدهی
+  | 'check_due'      // سررسید چک و اقساط
+  | 'bill_reminder'  // قبض و اشتراک
+  | 'system';        // پیام سیستم
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  amount?: number;
+  due_date?: string;
+  person_name?: string; // e.g. علی رضایی (for debt/split)
+  is_read: boolean;
+  status?: 'pending' | 'settled' | 'dismissed';
+  priority?: 'normal' | 'high' | 'urgent';
+  created_at: string;
+}
+
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TicketDepartment = 'پشتیبانی مالی' | 'پشتیبانی فنی' | 'انتقادات و پیشنهادات' | 'عمومی';
+
+export interface TicketMessage {
+  id: string;
+  ticket_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_role: 'user' | 'admin';
+  content: string;
+  created_at: string;
+}
+
+export interface Ticket {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  subject: string;
+  department: TicketDepartment;
+  priority: TicketPriority;
+  status: TicketStatus;
+  created_at: string;
+  updated_at: string;
+  messages: TicketMessage[];
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url?: string;
+  monthly_budget_cap: number; // in Tomans
+  theme_preference: 'dark' | 'light';
+  currency: 'تومان';
+  created_at: string;
+  role: 'user' | 'admin';
+}
+
+export interface CategoryBudget {
+  category: TransactionCategory;
+  monthly_limit: number;
   color: string;
   iconName: string;
 }
 
-export interface CategoryBudget {
-  categoryId: CategoryId;
-  monthlyLimit: number;
-}
-
-export interface Transaction {
-  id: string;
-  title: string;
-  amount: number; // In Tomans
-  type: TransactionType;
-  category: CategoryId;
-  date: string; // YYYY/MM/DD in Jalali or ISO format string
-  notes?: string;
-  merchant?: string;
-}
-
-export interface MonthlyHistory {
-  month: string; // e.g., 'فروردین', 'اردیبهشت', 'خرداد'
-  income: number;
-  expense: number;
-  savings: number;
-  savingsRate: number; // percentage
-}
-
-export interface UserProfile {
-  name: string;
-  email: string;
-  avatarUrl: string;
-  monthlyGoal: number; // Target savings in Tomans
-  currentBalance: number;
-  membershipTier: string;
-  currency: 'تومان' | 'ریال';
-}
-
-export interface AuthUser {
-  id: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  provider: 'email' | 'phone' | 'google';
-  isAuthenticated: boolean;
-}
-
-export interface DongMember {
-  id: string;
-  name: string;
-  shareAmount: number; // calculated share
-  paidAmount: number;  // amount this person actually paid
-  isSettled: boolean;
-}
-
-export interface DongGroup {
-  id: string;
-  title: string; // e.g., 'سفر اصفهان - هزینه ویلا و غذا'
-  totalAmount: number;
-  payerName: string; // who covered the bill
-  date: string;
-  category: CategoryId;
-  members: DongMember[];
-  notes?: string;
-}
-
-export interface FilterState {
-  searchQuery: string;
-  type: 'all' | 'income' | 'expense';
-  category: string;
-  sortBy: 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  content: string;
-  timestamp: string;
-}
-
-export type TicketStatus = 'open' | 'closed' | 'in_progress';
-export type TicketPriority = 'low' | 'medium' | 'high';
-
-export interface SupportTicket {
-  id: string;
-  user_id: string;
-  user_email: string;
-  user_name?: string;
-  subject: string;
-  message: string;
-  status: TicketStatus;
-  priority?: TicketPriority;
-  category?: string;
-  created_at: string;
-  admin_reply?: string;
-  updated_at?: string;
-}
+export type ActiveTab = 'dashboard' | 'transactions' | 'analytics' | 'reminders' | 'support' | 'settings';

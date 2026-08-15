@@ -1,291 +1,177 @@
-import { Transaction, CategoryId } from '../types';
-import { CATEGORIES } from '../data/initialData';
+// Utility for Persian numbers and currency formatting
 
-// Get current live date string (Shamsi for Persian, Gregorian for English)
-export const getLiveDate = (lang: 'fa' | 'en' = 'fa'): string => {
-  if (lang === 'fa') {
-    try {
-      return new Date().toLocaleDateString('fa-IR-u-ca-persian', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      });
-    } catch (e) {
-      return new Date().toLocaleDateString('fa-IR');
-    }
-  } else {
-    // Gregorian (Miladi) for English
-    return new Date().toLocaleDateString('en-US', {
+/**
+ * Converts Latin digits to Persian digits
+ */
+export function toPersianDigits(num: number | string | undefined | null): string {
+  if (num === undefined || num === null) return '';
+  const str = String(num);
+  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  return str.replace(/[0-9]/g, (w) => persianDigits[parseInt(w, 10)]);
+}
+
+/**
+ * Formats a number with commas and converts to Persian digits with تومان
+ */
+export function formatToman(amount: number | undefined | null, showUnit: boolean = true): string {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return showUnit ? `۰ تومان` : '۰';
+  }
+  const formatted = Math.round(amount)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const persianStr = toPersianDigits(formatted);
+  return showUnit ? `${persianStr} تومان` : persianStr;
+}
+
+/**
+ * Formats large amounts in concise Persian form (e.g. ۱.۲ میلیون تومان)
+ */
+export function formatCompactToman(amount: number): string {
+  if (Math.abs(amount) >= 1_000_000_000) {
+    const val = (amount / 1_000_000_000).toFixed(1);
+    return `${toPersianDigits(val)} میلیارد تومان`;
+  }
+  if (Math.abs(amount) >= 1_000_000) {
+    const val = (amount / 1_000_000).toFixed(1);
+    return `${toPersianDigits(val)} میلیون تومان`;
+  }
+  if (Math.abs(amount) >= 1_000) {
+    const val = (amount / 1_000).toFixed(0);
+    return `${toPersianDigits(val)} هزار تومان`;
+  }
+  return `${toPersianDigits(amount)} تومان`;
+}
+
+/**
+ * Converts Greg date string or Date to Persian/Shamsi readable string
+ */
+export function formatShamsiDate(dateInput: string | Date | undefined): string {
+  if (!dateInput) return 'نامشخص';
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return String(dateInput);
+    
+    // Using Intl with Persian locale
+    const formatted = new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(d);
+    return formatted;
+  } catch {
+    return String(dateInput);
+  }
+}
+
+/**
+ * Formats date to short Shamsi (e.g. ۱۴۰۳/۰۵/۲۵)
+ */
+export function formatShamsiShort(dateInput: string | Date | undefined): string {
+  if (!dateInput) return '';
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return String(dateInput);
+    
+    return new Intl.DateTimeFormat('fa-IR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    });
+    }).format(d);
+  } catch {
+    return String(dateInput);
   }
-};
-
-export const getLiveShamsiDate = getLiveDate;
-
-// Convert English numbers to Persian digits
-export const toPersianDigits = (num: number | string): string => {
-  if (num === null || num === undefined) return '';
-  const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-
-  let str = num.toString();
-  for (let i = 0; i < 10; i++) {
-    const reg = new RegExp(englishDigits[i], 'g');
-    str = str.replace(reg, persianDigits[i]);
-  }
-  return str;
-};
-
-// Convert Persian digits to English digits
-export const toEnglishDigits = (str: string): string => {
-  if (!str) return '';
-  return str
-    .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
-    .replace(/[0-9]/g, (d) => d);
-};
-
-export const JALALI_MONTHS = [
-  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
-];
-
-export const GREGORIAN_MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
-
-export interface DynamicMonthItem {
-  key: string; // e.g. "1405-05" or "2026-08"
-  year: number;
-  month: number; // 1 to 12
-  isJalali: boolean;
-  labelFa: string; // e.g. "مرداد ۱۴۰۵"
-  labelEn: string; // e.g. "August 2026"
-  shortLabelFa: string; // "مرداد"
-  shortLabelEn: string; // "Aug"
 }
 
-// Parse transaction date string into year, month, isJalali
-export const parseTxYearMonth = (dateStr: string, isFa: boolean) => {
-  if (!dateStr) return null;
-  const cleaned = toEnglishDigits(dateStr).trim();
-  const parts = cleaned.split(/[/.-]/).map((p) => parseInt(p, 10)).filter((p) => !isNaN(p));
-  if (parts.length < 2) return null;
-
-  let year = parts[0];
-  let month = parts[1];
-
-  // If format is MM/DD/YYYY
-  if (parts.length >= 3 && parts[2] > 1000) {
-    year = parts[2];
-    month = parts[0];
-  }
-
-  // Check if year is Jalali (< 1700)
-  const isJalali = year < 1700;
-
-  return { year, month, isJalali };
-};
-
-// Get current live year and month
-export const getCurrentLiveYearMonth = (isFa: boolean) => {
-  const now = new Date();
-  if (isFa) {
-    try {
-      const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', {
-        year: 'numeric',
-        month: 'numeric',
-      });
-      const parts = formatter.formatToParts(now);
-      const year = parseInt(parts.find((p) => p.type === 'year')?.value || '1405', 10);
-      const month = parseInt(parts.find((p) => p.type === 'month')?.value || '5', 10);
-      return { year, month, isJalali: true };
-    } catch (e) {
-      return { year: 1405, month: 5, isJalali: true };
-    }
-  } else {
-    return { year: now.getFullYear(), month: now.getMonth() + 1, isJalali: false };
-  }
-};
-
-// Create a MonthItem helper
-export const createMonthItem = (year: number, month: number, isJalali: boolean): DynamicMonthItem => {
-  const key = `${year}-${String(month).padStart(2, '0')}`;
-  let labelFa = '';
-  let labelEn = '';
-  let shortLabelFa = '';
-  let shortLabelEn = '';
-
-  const mIndex = Math.max(0, Math.min(11, month - 1));
-
-  if (isJalali) {
-    shortLabelFa = JALALI_MONTHS[mIndex];
-    labelFa = `${shortLabelFa} ${toPersianDigits(year)}`;
-    shortLabelEn = GREGORIAN_MONTHS[mIndex];
-    labelEn = `${shortLabelEn} ${year}`;
-  } else {
-    shortLabelEn = GREGORIAN_MONTHS[mIndex];
-    labelEn = `${shortLabelEn} ${year}`;
-    shortLabelFa = JALALI_MONTHS[mIndex];
-    labelFa = `${shortLabelFa} ${toPersianDigits(year)}`;
-  }
-
-  return {
-    key,
-    year,
-    month,
-    isJalali,
-    labelFa,
-    labelEn,
-    shortLabelFa,
-    shortLabelEn,
-  };
-};
-
-// Get available months list (sorted NEWEST to OLDEST)
-export const getAvailableMonths = (transactions: Transaction[], isFa: boolean): DynamicMonthItem[] => {
-  const current = getCurrentLiveYearMonth(isFa);
-  const monthMap = new Map<string, DynamicMonthItem>();
-
-  // 1. Add current live month
-  const currentItem = createMonthItem(current.year, current.month, current.isJalali);
-  monthMap.set(currentItem.key, currentItem);
-
-  // 2. Add all months from transactions
-  transactions.forEach((tx) => {
-    const parsed = parseTxYearMonth(tx.date, isFa);
-    if (parsed) {
-      const item = createMonthItem(parsed.year, parsed.month, parsed.isJalali);
-      monthMap.set(item.key, item);
-    }
-  });
-
-  // 3. Ensure at least 6 consecutive preceding months
-  let tempYear = current.year;
-  let tempMonth = current.month;
-  for (let i = 0; i < 6; i++) {
-    const item = createMonthItem(tempYear, tempMonth, current.isJalali);
-    if (!monthMap.has(item.key)) {
-      monthMap.set(item.key, item);
-    }
-    tempMonth--;
-    if (tempMonth < 1) {
-      tempMonth = 12;
-      tempYear--;
-    }
-  }
-
-  const list = Array.from(monthMap.values());
-
-  // Sort descending: NEWEST month first
-  list.sort((a, b) => {
-    if (b.year !== a.year) return b.year - a.year;
-    return b.month - a.month;
-  });
-
-  return list;
-};
-
-// Format Currency with separation commas and optional suffix
-export const formatCurrency = (amount: number, showSuffix = true, toFa = true): string => {
-  const formatted = Math.abs(amount).toLocaleString('fa-IR');
-  const sign = amount < 0 ? '-' : '';
-  const result = `${sign}${formatted}`;
-  return showSuffix ? `${result} تومان` : result;
-};
-
-// Get Category object by id
-export const getCategoryById = (catId: CategoryId) => {
-  return CATEGORIES.find((c) => c.id === catId) || CATEGORIES[CATEGORIES.length - 1];
-};
-
-// Calculate total income, expense, and balance from transactions
-export const calculateTotals = (transactions: Transaction[]) => {
-  let totalIncome = 0;
-  let totalExpense = 0;
-
-  transactions.forEach((tx) => {
-    if (tx.type === 'income') {
-      totalIncome += tx.amount;
-    } else {
-      totalExpense += tx.amount;
-    }
-  });
-
-  const netSavings = totalIncome - totalExpense;
-  const savingsRate = totalIncome > 0 ? Math.round((netSavings / totalIncome) * 100) : 0;
-
-  return {
-    totalIncome,
-    totalExpense,
-    netSavings,
-    savingsRate,
-  };
-};
-
-// Expense breakdown by Category
-export const getExpenseCategoryBreakdown = (transactions: Transaction[]) => {
-  const expenses = transactions.filter((t) => t.type === 'expense');
-  const totalExpense = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-
-  const map: Record<string, { categoryId: CategoryId; nameFa: string; amount: number; percentage: number; color: string }> = {};
-
-  expenses.forEach((tx) => {
-    const cat = getCategoryById(tx.category);
-    if (!map[tx.category]) {
-      map[tx.category] = {
-        categoryId: tx.category,
-        nameFa: cat.nameFa,
-        amount: 0,
-        percentage: 0,
-        color: cat.color,
-      };
-    }
-    map[tx.category].amount += tx.amount;
-  });
-
-  const list = Object.values(map).map((item) => ({
-    ...item,
-    percentage: totalExpense > 0 ? Math.round((item.amount / totalExpense) * 100) : 0,
-  }));
-
-  list.sort((a, b) => b.amount - a.amount);
-  return { list, totalExpense };
-};
-
-// Get Top Expense Category
-export const getTopExpenseCategory = (transactions: Transaction[]) => {
-  const { list } = getExpenseCategoryBreakdown(transactions);
-  return list[0] || null;
-};
-
-// Export transactions to CSV file
-export const exportTransactionsCSV = (transactions: Transaction[]) => {
-  const headers = ['کد تراکنش', 'عنوان', 'نوع', 'مبلغ (تومان)', 'دسته‌بندی', 'تاریخ', 'طرف حساب / فروشگاه', 'توضیحات'];
-  const rows = transactions.map((t) => {
-    const cat = getCategoryById(t.category);
-    return [
-      t.id,
-      `"${t.title.replace(/"/g, '""')}"`,
-      t.type === 'income' ? 'درآمد' : 'هزینه',
-      t.amount,
-      `"${cat.nameFa}"`,
-      t.date,
-      `"${(t.merchant || '').replace(/"/g, '""')}"`,
-      `"${(t.notes || '').replace(/"/g, '""')}"`,
-    ].join(',');
-  });
-
-  const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n'); // Add UTF-8 BOM for Persian text in Excel
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `wealthyar-transactions-${new Date().toISOString().slice(0, 10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+/**
+ * Category styling colors and icons
+ */
+export const CATEGORY_METADATA: Record<
+  string,
+  { color: string; bgLight: string; bgDark: string; icon: string; defaultType: 'expense' | 'income' }
+> = {
+  'خوراک و رستوران': {
+    color: '#f97316',
+    bgLight: 'bg-orange-50 text-orange-700 border-orange-200',
+    bgDark: 'dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/50',
+    icon: 'Utensils',
+    defaultType: 'expense',
+  },
+  'مسکن و اجاره': {
+    color: '#6366f1',
+    bgLight: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    bgDark: 'dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/50',
+    icon: 'Home',
+    defaultType: 'expense',
+  },
+  'حمل‌ونقل و خودرو': {
+    color: '#0ea5e9',
+    bgLight: 'bg-sky-50 text-sky-700 border-sky-200',
+    bgDark: 'dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/50',
+    icon: 'Car',
+    defaultType: 'expense',
+  },
+  'خرید و پوشاک': {
+    color: '#ec4899',
+    bgLight: 'bg-pink-50 text-pink-700 border-pink-200',
+    bgDark: 'dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800/50',
+    icon: 'ShoppingBag',
+    defaultType: 'expense',
+  },
+  'سرگرمی و تفریح': {
+    color: '#8b5cf6',
+    bgLight: 'bg-purple-50 text-purple-700 border-purple-200',
+    bgDark: 'dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/50',
+    icon: 'Gamepad2',
+    defaultType: 'expense',
+  },
+  'سلامت و درمان': {
+    color: '#ef4444',
+    bgLight: 'bg-red-50 text-red-700 border-red-200',
+    bgDark: 'dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/50',
+    icon: 'HeartPulse',
+    defaultType: 'expense',
+  },
+  'قبوض و شارژ': {
+    color: '#eab308',
+    bgLight: 'bg-amber-50 text-amber-700 border-amber-200',
+    bgDark: 'dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50',
+    icon: 'Receipt',
+    defaultType: 'expense',
+  },
+  'آموزش و کتاب': {
+    color: '#14b8a6',
+    bgLight: 'bg-teal-50 text-teal-700 border-teal-200',
+    bgDark: 'dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/50',
+    icon: 'GraduationCap',
+    defaultType: 'expense',
+  },
+  'حقوق و دستمزد': {
+    color: '#10b981',
+    bgLight: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    bgDark: 'dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50',
+    icon: 'Briefcase',
+    defaultType: 'income',
+  },
+  'سرمایه‌گذاری و پس‌انداز': {
+    color: '#06b6d4',
+    bgLight: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    bgDark: 'dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800/50',
+    icon: 'TrendingUp',
+    defaultType: 'income',
+  },
+  'کسب‌وکار و فروش': {
+    color: '#3b82f6',
+    bgLight: 'bg-blue-50 text-blue-700 border-blue-200',
+    bgDark: 'dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/50',
+    icon: 'DollarSign',
+    defaultType: 'income',
+  },
+  'سایر و متفرقه': {
+    color: '#64748b',
+    bgLight: 'bg-slate-100 text-slate-700 border-slate-200',
+    bgDark: 'dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    icon: 'MoreHorizontal',
+    defaultType: 'expense',
+  },
 };

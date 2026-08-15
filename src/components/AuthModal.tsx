@@ -1,260 +1,312 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, CheckCircle2, KeyRound, RefreshCw, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { Language, translations } from '../data/translations';
-import { AuthUser } from '../types';
+import {
+  X,
+  Mail,
+  Lock,
+  User,
+  LogIn,
+  UserPlus,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { DEFAULT_AVATARS, MALE_AVATAR_SVG, FEMALE_AVATAR_SVG } from '../utils/avatars';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: AuthUser) => void;
-  lang: Language;
 }
 
-type EmailMode = 'login' | 'register';
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+  const { loginWithEmail, registerWithEmail, user } = useApp();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
 
-export const AuthModal: React.FC<AuthModalProps> = ({
-  isOpen,
-  onClose,
-  onLoginSuccess,
-  lang,
-}) => {
-  const t = translations[lang];
-  const isFa = lang === 'fa';
-
-  const [emailMode, setEmailMode] = useState<EmailMode>('login');
-
-  // Email form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState<string>(MALE_AVATAR_SVG);
 
-  // UI status
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  // Handle Email Auth (Login / Register)
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const validateEmail = (str: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+    setError(null);
+    setSuccessMsg(null);
 
-    if (!email || !email.includes('@')) {
-      setErrorMsg(isFa ? 'لطفاً یک آدرس ایمیل معتبر وارد کنید.' : 'Please enter a valid email address.');
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError('لطفاً آدرس ایمیل خود را وارد نمایید.');
       return;
     }
 
-    if (!password || password.length < 6) {
-      setErrorMsg(isFa ? 'رمز عبور باید حداقل ۶ کاراکتر باشد.' : 'Password must be at least 6 characters.');
+    if (!validateEmail(cleanEmail)) {
+      setError('فرمت آدرس ایمیل وارد شده معتبر نمی‌باشد (مثال: user@example.com).');
       return;
     }
 
-    if (emailMode === 'register') {
-      if (!fullName.trim()) {
-        setErrorMsg(isFa ? 'لطفاً نام و نام خانوادگی خود را وارد کنید.' : 'Please enter your full name.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setErrorMsg(isFa ? 'تکرار رمز عبور با رمز عبور اصلی مطابقت ندارد.' : 'Passwords do not match.');
-        return;
-      }
+    if (!password || password.length < 4) {
+      setError('رمز عبور باید حداقل ۴ کاراکتر باشد.');
+      return;
     }
 
-    setIsSubmitting(true);
+    if (mode === 'register' && !fullName.trim()) {
+      setError('لطفاً نام و نام خانوادگی خود را وارد کنید.');
+      return;
+    }
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const authenticatedUser: AuthUser = {
-        id: `usr-email-${Date.now()}`,
-        email: email,
-        name: fullName || email.split('@')[0],
-        provider: 'email',
-        isAuthenticated: true,
-      };
-
-      setSuccessMsg(
-        emailMode === 'register'
-          ? (isFa ? 'حساب کاربری جدید با موفقیت ایجاد شد!' : 'Account created successfully!')
-          : (isFa ? 'ورود با موفقیت انجام شد.' : 'Logged in successfully.')
-      );
+    setLoading(true);
+    try {
+      if (mode === 'login') {
+        await loginWithEmail(cleanEmail, password);
+        setSuccessMsg(`با موفقیت وارد شدید. خوش آمدید!`);
+      } else {
+        await registerWithEmail(cleanEmail, fullName.trim(), password, selectedAvatar);
+        setSuccessMsg(`حساب کاربری جدید برای ${cleanEmail} با موفقیت ساخته شد.`);
+      }
 
       setTimeout(() => {
-        onLoginSuccess(authenticatedUser);
+        setLoading(false);
         onClose();
       }, 700);
-    }, 500);
+    } catch (err: any) {
+      setError(err?.message || 'خطایی در پردازش اطلاعات رخ داد.');
+      setLoading(false);
+    }
+  };
+
+  const handleQuickDemoLogin = async (demoEmail: string, name: string) => {
+    setError(null);
+    setLoading(true);
+    await loginWithEmail(demoEmail, 'demo123', name);
+    setSuccessMsg(`ورود سریع به عنوان ${name} انجام شد.`);
+    setTimeout(() => {
+      setLoading(false);
+      onClose();
+    }, 600);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-md my-auto p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 sm:space-y-5 text-start max-h-[92vh] overflow-y-auto">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 rtl:left-4 ltr:right-4 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 transition-all z-10"
-        >
-          <X className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs font-vazir">
+      <div
+        id="auth-modal-card"
+        className="w-full max-w-md bg-white dark:bg-[#0F1512] rounded-2xl shadow-2xl border border-[#E2E8E4] dark:border-[#1A2621] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8E4] dark:border-[#1A2621] bg-emerald-50/40 dark:bg-[#121F19]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-800 text-white dark:bg-emerald-600">
+              {mode === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+            </div>
+            <div>
+              <h3 className="font-cairo text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                {mode === 'login' ? 'ورود به حساب کاربری' : 'ایجاد حساب کاربری جدید'}
+              </h3>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-vazir">
+                سامانه مدیریت مالی <span className="font-brand text-emerald-800 dark:text-emerald-400">کیفیار</span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-[#16221D] transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-        {/* Modal Header */}
-        <div className="rtl:pr-1 ltr:pl-1">
-          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-emerald-600 shrink-0" />
-            {isFa ? (
-              <span className="flex items-center gap-1.5">
-                ورود و ثبت‌نام در <span className="font-walletyar text-2xl text-emerald-600 dark:text-emerald-400">کیف یار</span>
-              </span>
+        {/* Tab Switcher */}
+        <div className="flex border-b border-[#E2E8E4] dark:border-[#1A2621] p-1.5 bg-zinc-50 dark:bg-[#0D1411]">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login');
+              setError(null);
+              setSuccessMsg(null);
+            }}
+            className={`flex-1 py-2 text-xs font-cairo font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
+              mode === 'login'
+                ? 'bg-white dark:bg-[#15241C] text-emerald-900 dark:text-emerald-300 shadow-xs border border-[#E2E8E4] dark:border-[#1F3127]'
+                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            <LogIn className="w-4 h-4" />
+            <span>ورود با ایمیل</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('register');
+              setError(null);
+              setSuccessMsg(null);
+            }}
+            className={`flex-1 py-2 text-xs font-cairo font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 ${
+              mode === 'register'
+                ? 'bg-white dark:bg-[#15241C] text-emerald-900 dark:text-emerald-300 shadow-xs border border-[#E2E8E4] dark:border-[#1F3127]'
+                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>ثبت‌نام حساب جدید</span>
+          </button>
+        </div>
+
+        {/* Body Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {mode === 'register' && (
+            <>
+              {/* Full Name */}
+              <div>
+                <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                  نام و نام خانوادگی *
+                </label>
+                <input
+                  id="auth-name-input"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="مثال: علی رضایی"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-xs text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none"
+                  required
+                />
+              </div>
+
+              {/* Avatar Selection for registration */}
+              <div>
+                <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                  انتخاب آواتار وکتور اولیه:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {DEFAULT_AVATARS.map((av) => (
+                    <button
+                      key={av.id}
+                      type="button"
+                      onClick={() => setSelectedAvatar(av.url)}
+                      className={`p-2 rounded-xl border flex items-center gap-2 text-right transition cursor-pointer ${
+                        selectedAvatar === av.url
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-950 dark:bg-[#162B21] dark:text-emerald-200 ring-1 ring-emerald-600'
+                          : 'border-[#E2E8E4] dark:border-[#1F2E27] bg-zinc-50 dark:bg-[#141E1A] text-zinc-700 dark:text-zinc-300'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-white">
+                        <img src={av.url} alt={av.label} className="w-full h-full" />
+                      </div>
+                      <span className="text-xs font-cairo font-bold">{av.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Email Address */}
+          <div>
+            <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1">
+              <Mail className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+              آدرس ایمیل *
+            </label>
+            <input
+              id="auth-email-input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-xs text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none text-left dir-ltr font-vazir"
+              required
+            />
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1">
+              <Lock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+              رمز عبور *
+            </label>
+            <input
+              id="auth-password-input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-xs text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none text-left dir-ltr"
+              required
+            />
+          </div>
+
+          <div className="p-3 bg-emerald-50/50 dark:bg-[#121F19] rounded-xl border border-emerald-200/40 dark:border-emerald-900/40 text-[11px] text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+            <span>حریم خصوصی شما تضمین شده است و نیازی به ثبت شماره موبایل نیست.</span>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            id="auth-submit-btn"
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-cairo font-bold text-sm shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {loading ? (
+              <span>در حال اعتبارسنجی...</span>
+            ) : mode === 'login' ? (
+              <>
+                <LogIn className="w-4 h-4" />
+                <span>ورود به حساب کاربری</span>
+              </>
             ) : (
-              <span>Sign In & Register - <span className="font-berlin text-emerald-600">Kifyar</span></span>
+              <>
+                <UserPlus className="w-4 h-4" />
+                <span>ثبت‌نام و ورود به کیفیار</span>
+              </>
             )}
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {isFa
-              ? 'ورود امن با ایمیل و رمز عبور برای مدیریت هوشمند هزینه‌ها'
-              : 'Secure sign in with email and password for smart budgeting'}
-          </p>
-        </div>
+          </button>
 
-        {/* Status Alert Messages */}
-        {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-start gap-2 animate-fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{errorMsg}</span>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {/* EMAIL & PASSWORD AUTH FORM */}
-        <div className="space-y-4">
-          {/* Mode Selector (Login vs Register) */}
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 gap-2">
-            <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 truncate">
-              {emailMode === 'login'
-                ? (isFa ? 'ورود با حساب کاربری' : 'Sign In with Email')
-                : (isFa ? 'ثبت‌نام و ایجاد حساب جدید' : 'Create New Account')}
+          {/* Fast Demo login options */}
+          <div className="pt-3 border-t border-[#E2E8E4] dark:border-[#1A2621] space-y-2">
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block text-center font-vazir">
+              یا ورود سریع با حساب‌های نمونه:
             </span>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEmailMode(emailMode === 'login' ? 'register' : 'login');
-                setErrorMsg('');
-                setSuccessMsg('');
-              }}
-              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 underline shrink-0"
-            >
-              {emailMode === 'login'
-                ? (isFa ? 'ایجاد حساب جدید' : 'Create an account')
-                : (isFa ? 'قبلاً ثبت‌نام کرده‌اید؟' : 'Already registered?')}
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin('seyedmahanhejrati@gmail.com', 'سید ماهان هجرتی')}
+                className="py-1.5 px-2 rounded-lg bg-zinc-100 dark:bg-[#16221D] hover:bg-emerald-50 dark:hover:bg-[#1C2F25] text-zinc-800 dark:text-zinc-200 text-[11px] font-cairo font-bold transition border border-[#E2E8E4] dark:border-[#1F2E27] truncate cursor-pointer"
+              >
+                حساب ماهان هجرتی
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin('demo.user@kifyar.ir', 'کاربر نمونه کیفیار')}
+                className="py-1.5 px-2 rounded-lg bg-zinc-100 dark:bg-[#16221D] hover:bg-emerald-50 dark:hover:bg-[#1C2F25] text-zinc-800 dark:text-zinc-200 text-[11px] font-cairo font-bold transition border border-[#E2E8E4] dark:border-[#1F2E27] truncate cursor-pointer"
+              >
+                کاربر مهمان نمونه
+              </button>
+            </div>
           </div>
-
-          <form onSubmit={handleEmailSubmit} className="space-y-3">
-            {emailMode === 'register' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {isFa ? 'نام و نام خانوادگی:' : 'Full Name:'}
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder={isFa ? 'علی محمدی' : 'Ali Mohammadi'}
-                    className="w-full rtl:pr-3 rtl:pl-9 ltr:pl-3 ltr:pr-9 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 text-slate-900 dark:text-white text-xs outline-none"
-                  />
-                  <User className="w-4 h-4 text-slate-400 absolute rtl:left-2.5 ltr:right-2.5 top-2.5" />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {isFa ? 'پست الکترونیکی (ایمیل):' : 'Email Address:'}
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@kifyar.ir"
-                  dir="ltr"
-                  className="w-full rtl:pr-3 rtl:pl-9 ltr:pl-9 ltr:pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 text-slate-900 dark:text-white text-xs outline-none text-start"
-                />
-                <Mail className="w-4 h-4 text-slate-400 absolute rtl:left-2.5 ltr:left-2.5 top-2.5" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {isFa ? 'رمز عبور:' : 'Password:'}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  dir="ltr"
-                  className="w-full rtl:pr-9 rtl:pl-9 ltr:pl-9 ltr:pr-9 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 text-slate-900 dark:text-white text-xs outline-none text-start"
-                />
-                <Lock className="w-4 h-4 text-slate-400 absolute rtl:right-2.5 ltr:left-2.5 top-2.5" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute rtl:left-2.5 ltr:right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {emailMode === 'register' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {isFa ? 'تکرار رمز عبور:' : 'Confirm Password:'}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    dir="ltr"
-                    className="w-full rtl:pr-9 rtl:pl-3 ltr:pl-9 ltr:pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 text-slate-900 dark:text-white text-xs outline-none text-start"
-                  />
-                  <Lock className="w-4 h-4 text-slate-400 absolute rtl:right-2.5 ltr:left-2.5 top-2.5" />
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 mt-1 cursor-pointer"
-            >
-              {isSubmitting ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <span>
-                  {emailMode === 'login'
-                    ? (isFa ? 'ورود به حساب کاربری' : 'Sign In')
-                    : (isFa ? 'ثبت‌نام و ورود' : 'Register & Enter')}
-                </span>
-              )}
-            </button>
-          </form>
-        </div>
+        </form>
       </div>
     </div>
   );
