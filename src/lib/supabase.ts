@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Configuration keys from environment or custom runtime settings
-const DEFAULT_SUPABASE_URL = 'https://yqmhtfuwnnlzenqrhyxm.supabase.co/rest/v1/';
+// Configuration keys from environment or custom runtime settings (بدون مسیر اضافی /rest/v1)
+const DEFAULT_SUPABASE_URL = 'https://yqmhtfuwnnlzenqrhyxm.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 
   ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string) ||
   'sb_publishable_IJT6kGn76dNThqX2iXgwzg_OzkEtuLT';
@@ -43,7 +43,7 @@ export function getSupabaseConfig(): { url: string; anonKey: string; isConfigure
 
   return {
     url: cleanDefaultUrl,
-    anonKey: DEFAULT_SUPABASE_ANON_KEY,
+    anonKey: DEFAULT_SUPABASE_ANON_KEY.trim(),
     isConfigured,
   };
 }
@@ -94,8 +94,9 @@ export function getSupabaseClient(): SupabaseClient | null {
  */
 export async function testSupabaseConnection(url?: string, anonKey?: string): Promise<{ success: boolean; message: string }> {
   try {
-    const testUrl = url || getSupabaseConfig().url;
-    const testKey = anonKey || getSupabaseConfig().anonKey;
+    const config = getSupabaseConfig();
+    const testUrl = url ? cleanSupabaseUrl(url) : config.url;
+    const testKey = anonKey || config.anonKey;
 
     if (!testUrl || !testKey || testUrl.includes('your-project')) {
       return {
