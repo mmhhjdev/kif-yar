@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/kif-yar/', // اضافه کردن مسیر پایه برای گیت‌هاب پیجز
+    base: './', // تغییر مسیر پایه به صورت نسبی
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
