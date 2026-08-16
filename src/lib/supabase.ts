@@ -1,10 +1,24 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Configuration keys from environment or custom runtime settings
-const DEFAULT_SUPABASE_URL = ((import.meta as any).env?.VITE_SUPABASE_URL as string) || '';
-const DEFAULT_SUPABASE_ANON_KEY = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string) || '';
+const DEFAULT_SUPABASE_URL = 'https://yqmhtfuwnnlzenqrhyxm.supabase.co/rest/v1/';
+const DEFAULT_SUPABASE_ANON_KEY = 
+  ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string) ||
+  'sb_publishable_IJT6kGn76dNThqX2iXgwzg_OzkEtuLT';
 
 let supabaseInstance: SupabaseClient | null = null;
+
+export function cleanSupabaseUrl(rawUrl: string): string {
+  if (!rawUrl) return '';
+  let cleaned = rawUrl.trim();
+  // Remove accidental subpaths like /rest/v1, /auth/v1, /v1, and trailing slashes
+  cleaned = cleaned.replace(/\/(auth|rest|storage|functions|graphql|v1)(\/.*)?$/i, '');
+  cleaned = cleaned.replace(/\/+$/, '');
+  if (cleaned && !cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
+    cleaned = 'https://' + cleaned;
+  }
+  return cleaned;
+}
 
 export function getSupabaseConfig(): { url: string; anonKey: string; isConfigured: boolean } {
   try {
@@ -12,21 +26,23 @@ export function getSupabaseConfig(): { url: string; anonKey: string; isConfigure
     if (savedConfig) {
       const parsed = JSON.parse(savedConfig);
       if (parsed.url && parsed.anonKey) {
-        return { url: parsed.url, anonKey: parsed.anonKey, isConfigured: true };
+        const cleanUrl = cleanSupabaseUrl(parsed.url);
+        return { url: cleanUrl, anonKey: parsed.anonKey.trim(), isConfigured: true };
       }
     }
   } catch (e) {
     console.warn('Error reading saved Supabase config:', e);
   }
 
+  const cleanDefaultUrl = cleanSupabaseUrl(DEFAULT_SUPABASE_URL);
   const isConfigured = Boolean(
-    DEFAULT_SUPABASE_URL &&
+    cleanDefaultUrl &&
     DEFAULT_SUPABASE_ANON_KEY &&
-    !DEFAULT_SUPABASE_URL.includes('your-project')
+    !cleanDefaultUrl.includes('your-project')
   );
 
   return {
-    url: DEFAULT_SUPABASE_URL,
+    url: cleanDefaultUrl,
     anonKey: DEFAULT_SUPABASE_ANON_KEY,
     isConfigured,
   };
@@ -39,7 +55,8 @@ export function saveSupabaseConfig(url: string, anonKey: string): boolean {
       supabaseInstance = null;
       return true;
     }
-    localStorage.setItem('kefyar_supabase_config', JSON.stringify({ url: url.trim(), anonKey: anonKey.trim() }));
+    const cleanUrl = cleanSupabaseUrl(url);
+    localStorage.setItem('kefyar_supabase_config', JSON.stringify({ url: cleanUrl, anonKey: anonKey.trim() }));
     supabaseInstance = null; // reset to re-init
     return true;
   } catch (e) {
@@ -56,7 +73,13 @@ export function getSupabaseClient(): SupabaseClient | null {
 
   if (!supabaseInstance) {
     try {
-      supabaseInstance = createClient(config.url, config.anonKey);
+      supabaseInstance = createClient(config.url, config.anonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      });
     } catch (err) {
       console.error('Failed to instantiate Supabase client:', err);
       return null;

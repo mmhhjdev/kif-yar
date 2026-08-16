@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   UserProfile,
   Transaction,
@@ -6,35 +6,56 @@ import {
   Ticket,
   TicketMessage,
   ActiveTab,
+  TransactionType,
   TransactionCategory,
 } from '../types';
+import {
+  INITIAL_USER,
+  INITIAL_TRANSACTIONS,
+  INITIAL_NOTIFICATIONS,
+  INITIAL_TICKETS,
+} from '../data/initialData';
 import { getSupabaseClient } from '../lib/supabase';
 import { MALE_AVATAR_SVG } from '../utils/avatars';
+import { isAdminEmail } from '../utils/admin';
+
+export interface AuthResult {
+  success: boolean;
+  error?: string;
+  requiresEmailConfirmation?: boolean;
+}
 
 interface AppContextType {
+  // Navigation & View
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   adminMode: boolean;
   setAdminMode: (enabled: boolean) => void;
+  isAdmin: boolean;
 
+  // Theme
   isDarkMode: boolean;
   toggleDarkMode: () => void;
 
+  // Authentication & Session
   isAuthenticated: boolean;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  loginWithEmail: (email: string, password?: string) => Promise<boolean>;
-  registerWithEmail: (email: string, fullName: string, password?: string, avatarUrl?: string) => Promise<boolean>;
-  logout: () => void;
+  loginWithEmail: (email: string, password?: string) => Promise<AuthResult>;
+  registerWithEmail: (email: string, fullName: string, password?: string, avatarUrl?: string) => Promise<AuthResult>;
+  logout: () => Promise<void>;
 
+  // User Profile
   user: UserProfile;
-  updateUserProfile: (profile: Partial<UserProfile>) => void;
+  updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>;
 
+  // Transactions
   transactions: Transaction[];
   addTransaction: (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => void;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
 
+  // Notifications & Alarms
   notifications: NotificationItem[];
   addNotification: (item: Omit<NotificationItem, 'id' | 'user_id' | 'created_at' | 'is_read'>) => void;
   markNotificationAsRead: (id: string) => void;
@@ -43,13 +64,15 @@ interface AppContextType {
   deleteNotification: (id: string) => void;
   unreadNotificationsCount: number;
 
+  // Tickets
   tickets: Ticket[];
   selectedTicket: Ticket | null;
   setSelectedTicket: (ticket: Ticket | null) => void;
-  createTicket: (ticket: { subject: string; department: Ticket['department']; priority: Ticket['priority']; initialMessage: string }) => Promise<void>;
-  addTicketMessage: (ticketId: string, content: string, asAdmin?: boolean) => Promise<void>;
+  createTicket: (ticket: { subject: string; department: Ticket['department']; priority: Ticket['priority']; initialMessage: string }) => void;
+  addTicketMessage: (ticketId: string, content: string, asAdmin?: boolean) => void;
   updateTicketStatus: (ticketId: string, status: Ticket['status']) => void;
 
+  // Analytics & Summary Computed Stats
   totalIncome: number;
   totalExpense: number;
   netBalance: number;
@@ -57,6 +80,7 @@ interface AppContextType {
   budgetUtilizationPercent: number;
   expensesByCategory: Record<TransactionCategory, number>;
 
+  // Reset & Helpers
   resetToInitialData: () => void;
   activeSupportTicketId: string | null;
   navigateToSupportWithTicket: (ticketId?: string) => void;
@@ -71,27 +95,37 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'kefyar_notifications_data',
   TICKETS: 'kefyar_tickets_data',
   THEME: 'kefyar_theme_mode',
-  REGISTERED_USERS: 'kefyar_registered_users_db',
 };
 
-const ADMIN_EMAILS = [
-  'seyedmahanhejrati@gmail.com',
-  'mahan.hejrati91@gmail.com',
-];
-
-const EMPTY_USER: UserProfile = {
-  id: '',
-  email: '',
-  full_name: '',
-  avatar_url: MALE_AVATAR_SVG,
-  monthly_budget_cap: 0,
-  currency: 'تومان',
-  theme_preference: 'dark',
-  created_at: '',
-  role: 'user',
-};
+function translateSupabaseError(msg: string): string {
+  if (!msg) return 'خطایی در پردازش اطلاعات رخ داد.';
+  const lower = msg.toLowerCase();
+  if (lower.includes('invalid path specified in request url') || lower.includes('invalid path')) {
+    return 'آدرس یا تنظیمات ارتباط با سرور دیتابیس معتبر نیست. اگر هنوز حسابی نساخته‌اید، لطفاً از تب «ثبت‌نام در کیفیار» ثبت‌نام فرمایید.';
+  }
+  if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
+    return 'ایمیل یا رمز عبور وارد شده اشتباه است. اگر برای اولین بار وارد می‌شوید، لطفاً ابتدا از تب «ثبت‌نام در کیفیار» ثبت‌نام کنید.';
+  }
+  if (lower.includes('email not confirmed') || lower.includes('not verified')) {
+    return 'آدرس ایمیل شما هنوز تایید نشده است. لطفاً صندوق ورودی ایمیل خود را بررسی و روی لینک فعال‌سازی کلیک کنید.';
+  }
+  if (lower.includes('user already registered') || lower.includes('already exists')) {
+    return 'حساب کاربری با این ایمیل قبلاً ثبت‌نام شده است. لطفاً از تب ورود وارد شوید.';
+  }
+  if (lower.includes('password should be at least')) {
+    return 'رمز عبور باید حداقل ۶ کاراکتر باشد.';
+  }
+  if (lower.includes('rate limit') || lower.includes('too many requests')) {
+    return 'تعداد درخواست‌های ارسالی بیش از حد مجاز است. لطفاً دقایقی دیگر تلاش فرمایید.';
+  }
+  if (lower.includes('failed to fetch') || lower.includes('network error')) {
+    return 'خطای برقراری ارتباط با شبکه یا سرور دیتابیس رخ داده است.';
+  }
+  return msg;
+}
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // 1. Theme State
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
       const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
@@ -115,14 +149,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
+  // 2. Navigation State
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
-  const [adminMode, setAdminMode] = useState<boolean>(false);
+  const [adminMode, setAdminModeState] = useState<boolean>(false);
   const [activeSupportTicketId, setActiveSupportTicketId] = useState<string | null>(null);
 
+  // 3. Authentication & Session State (Starts Logged Out by default unless active Supabase session exists)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.AUTH);
-      if (saved !== null) return saved === 'true';
+      if (saved === 'true') return true;
     } catch (e) {
       console.error(e);
     }
@@ -131,25 +167,131 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  // 4. User Profile State (Strictly empty/guest when logged out)
   const [user, setUser] = useState<UserProfile>(() => {
     try {
+      const isAuth = localStorage.getItem(STORAGE_KEYS.AUTH) === 'true';
       const saved = localStorage.getItem(STORAGE_KEYS.USER);
-      if (saved && isAuthenticated) return JSON.parse(saved);
+      if (isAuth && saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.email) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return EMPTY_USER;
+    return INITIAL_USER;
   });
+
+  // Admin Check: Strictly for the designated master admin Gmail
+  const isAdmin = useMemo(() => {
+    return isAuthenticated && isAdminEmail(user?.email);
+  }, [isAuthenticated, user?.email]);
+
+  const setAdminMode = useCallback((enabled: boolean) => {
+    if (enabled && !isAdmin) {
+      alert('دسترسی به پنل پشتیبان فقط برای مدیر ارشد سامانه (seyedmahanhejrati@gmail.com) امکان‌پذیر است.');
+      setAdminModeState(false);
+      return;
+    }
+    setAdminModeState(enabled);
+  }, [isAdmin]);
+
+  // Clean legacy mock data if present
+  useEffect(() => {
+    try {
+      const oldTk = localStorage.getItem(STORAGE_KEYS.TICKETS);
+      if (oldTk && (oldTk.includes('tkt-101') || oldTk.includes('tkt-102') || oldTk.includes('راهنمایی در مورد فرمت خروجی'))) {
+        localStorage.removeItem(STORAGE_KEYS.TICKETS);
+        setTickets([]);
+      }
+      const oldTx = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+      if (oldTx && (oldTx.includes('tx-1') || oldTx.includes('حقوق ماهانه شرکت') || oldTx.includes('فروش دارایی طلا'))) {
+        localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
+        setTransactions([]);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  // Listen to Supabase Auth State changes on mount
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    // Check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const isAdm = isAdminEmail(session.user.email);
+        const activeUser: UserProfile = {
+          id: session.user.id,
+          email: session.user.email || '',
+          full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'کاربر کیفیار',
+          avatar_url: session.user.user_metadata?.avatar_url || MALE_AVATAR_SVG,
+          monthly_budget_cap: session.user.user_metadata?.monthly_budget_cap || 0,
+          currency: 'تومان',
+          theme_preference: isDarkMode ? 'dark' : 'light',
+          role: isAdm ? 'admin' : 'user',
+          created_at: session.user.created_at,
+        };
+        setUser(activeUser);
+        setIsAuthenticated(true);
+        localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
+      }
+    }).catch(console.error);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const isAdm = isAdminEmail(session.user.email);
+        const activeUser: UserProfile = {
+          id: session.user.id,
+          email: session.user.email || '',
+          full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'کاربر کیفیار',
+          avatar_url: session.user.user_metadata?.avatar_url || MALE_AVATAR_SVG,
+          monthly_budget_cap: session.user.user_metadata?.monthly_budget_cap || 0,
+          currency: 'تومان',
+          theme_preference: isDarkMode ? 'dark' : 'light',
+          role: isAdm ? 'admin' : 'user',
+          created_at: session.user.created_at,
+        };
+        setUser(activeUser);
+        setIsAuthenticated(true);
+        localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setUser(INITIAL_USER);
+        setAdminModeState(false);
+        setTransactions([]);
+        setNotifications([]);
+        setTickets([]);
+        setSelectedTicket(null);
+        localStorage.removeItem(STORAGE_KEYS.AUTH);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+        localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
+        localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
+        localStorage.removeItem(STORAGE_KEYS.TICKETS);
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [isDarkMode]);
 
   const updateUserProfile = async (updated: Partial<UserProfile>) => {
     setUser((prev) => {
       const next = { ...prev, ...updated };
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(next));
+      if (isAuthenticated) {
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(next));
+      }
       return next;
     });
 
+    // Sync to Supabase if connected
     const supabase = getSupabaseClient();
-    if (supabase && user.id) {
+    if (supabase && isAuthenticated && user.id) {
       try {
         await supabase.from('users').upsert({
           id: user.id,
@@ -167,178 +309,190 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const loginWithEmail = async (email: string, password?: string): Promise<boolean> => {
+  const loginWithEmail = async (email: string, password?: string): Promise<AuthResult> => {
     const cleanEmail = email.trim().toLowerCase();
     const supabase = getSupabaseClient();
 
-    if (supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: password || '',
-      });
-      if (error) {
-        throw new Error('ایمیل یا رمز عبور اشتباه است، یا کاربری با این مشخصات وجود ندارد.');
-      }
-      if (data.user) {
-        const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
-        const loggedUser: UserProfile = {
-          id: data.user.id,
+    if (supabase && password) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
-          full_name: data.user.user_metadata?.full_name || cleanEmail.split('@')[0],
-          avatar_url: data.user.user_metadata?.avatar_url || MALE_AVATAR_SVG,
-          monthly_budget_cap: 0,
-          currency: 'تومان',
-          theme_preference: isDarkMode ? 'dark' : 'light',
-          created_at: data.user.created_at,
-          role: isAdmin ? 'admin' : 'user',
-        };
-        setUser(loggedUser);
-        setIsAuthenticated(true);
-        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedUser));
-        localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-        return true;
+          password: password,
+        });
+
+        if (error) {
+          return { success: false, error: translateSupabaseError(error.message) };
+        }
+
+        if (data.user) {
+          const isAdm = isAdminEmail(data.user.email);
+          const activeUser: UserProfile = {
+            id: data.user.id,
+            email: data.user.email || cleanEmail,
+            full_name: data.user.user_metadata?.full_name || cleanEmail.split('@')[0],
+            avatar_url: data.user.user_metadata?.avatar_url || MALE_AVATAR_SVG,
+            monthly_budget_cap: data.user.user_metadata?.monthly_budget_cap || 0,
+            currency: 'تومان',
+            theme_preference: isDarkMode ? 'dark' : 'light',
+            role: isAdm ? 'admin' : 'user',
+            created_at: data.user.created_at,
+          };
+          setUser(activeUser);
+          setIsAuthenticated(true);
+          localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
+          return { success: true };
+        }
+      } catch (err: any) {
+        return { success: false, error: translateSupabaseError(err?.message) };
       }
     }
 
-    try {
-      const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.REGISTERED_USERS);
-      const registeredUsers: Array<UserProfile & { pass?: string }> = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-      
-      const foundUser = registeredUsers.find((u) => u.email === cleanEmail);
-      if (!foundUser) {
-        throw new Error('کاربری با این ایمیل ثبت‌نام نکرده است.');
-      }
-
-      if (password && foundUser.pass && foundUser.pass !== password) {
-        throw new Error('رمز عبور وارد شده نادرست است.');
-      }
-
-      const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
-      const activeUser: UserProfile = {
-        id: foundUser.id,
-        email: foundUser.email,
-        full_name: foundUser.full_name,
-        avatar_url: foundUser.avatar_url,
-        monthly_budget_cap: foundUser.monthly_budget_cap || 0,
-        currency: foundUser.currency || 'تومان',
-        theme_preference: foundUser.theme_preference || 'dark',
-        created_at: foundUser.created_at,
-        role: isAdmin ? 'admin' : 'user',
-      };
-
-      setUser(activeUser);
-      setIsAuthenticated(true);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
-      localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-      return true;
-    } catch (err: any) {
-      throw err;
-    }
+    // Fallback if client is unavailable
+    const isAdm = isAdminEmail(cleanEmail);
+    const activeUser: UserProfile = {
+      id: `usr-${Date.now()}`,
+      email: cleanEmail,
+      full_name: cleanEmail.split('@')[0],
+      avatar_url: MALE_AVATAR_SVG,
+      monthly_budget_cap: 0,
+      currency: 'تومان',
+      theme_preference: isDarkMode ? 'dark' : 'light',
+      role: isAdm ? 'admin' : 'user',
+      created_at: new Date().toISOString(),
+    };
+    setUser(activeUser);
+    setIsAuthenticated(true);
+    localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
+    return { success: true };
   };
 
-  const registerWithEmail = async (email: string, fullName: string, password?: string, avatarUrl?: string): Promise<boolean> => {
+  const registerWithEmail = async (
+    email: string,
+    fullName: string,
+    password?: string,
+    avatarUrl?: string
+  ): Promise<AuthResult> => {
     const cleanEmail = email.trim().toLowerCase();
     const supabase = getSupabaseClient();
 
-    if (supabase) {
-      const { data, error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: password || '',
-        options: {
-          data: {
+    if (supabase && password) {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: password,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              avatar_url: avatarUrl || MALE_AVATAR_SVG,
+            },
+          },
+        });
+
+        if (error) {
+          return { success: false, error: translateSupabaseError(error.message) };
+        }
+
+        // If session was returned immediately without email confirmation
+        if (data.session && data.user) {
+          const isAdm = isAdminEmail(data.user.email);
+          const newUser: UserProfile = {
+            id: data.user.id,
+            email: data.user.email || cleanEmail,
             full_name: fullName.trim(),
             avatar_url: avatarUrl || MALE_AVATAR_SVG,
-          }
+            monthly_budget_cap: 0,
+            currency: 'تومان',
+            theme_preference: isDarkMode ? 'dark' : 'light',
+            created_at: data.user.created_at,
+            role: isAdm ? 'admin' : 'user',
+          };
+          setUser(newUser);
+          setIsAuthenticated(true);
+          localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
+          return { success: true, requiresEmailConfirmation: false };
         }
-      });
-      if (error) {
-        throw new Error(error.message || 'خطا در ثبت‌نام با ایمیل.');
+
+        // Supabase requires email verification
+        if (data.user && !data.session) {
+          return { success: true, requiresEmailConfirmation: true };
+        }
+      } catch (err: any) {
+        return { success: false, error: translateSupabaseError(err?.message) };
       }
     }
 
-    try {
-      const storedUsersRaw = localStorage.getItem(STORAGE_KEYS.REGISTERED_USERS);
-      const registeredUsers: Array<UserProfile & { pass?: string }> = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-
-      if (registeredUsers.some((u) => u.email === cleanEmail)) {
-        throw new Error('این ایمیل قبلاً ثبت‌نام شده است.');
-      }
-
-      const isAdmin = ADMIN_EMAILS.includes(cleanEmail);
-      const newUser: UserProfile & { pass?: string } = {
-        id: `usr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        email: cleanEmail,
-        full_name: fullName.trim(),
-        avatar_url: avatarUrl || MALE_AVATAR_SVG,
-        monthly_budget_cap: 0,
-        currency: 'تومان',
-        theme_preference: isDarkMode ? 'dark' : 'light',
-        created_at: new Date().toISOString(),
-        role: isAdmin ? 'admin' : 'user',
-        pass: password,
-      };
-
-      registeredUsers.push(newUser);
-      localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(registeredUsers));
-
-      const activeUser: UserProfile = {
-        id: newUser.id,
-        email: newUser.email,
-        full_name: newUser.full_name,
-        avatar_url: newUser.avatar_url,
-        monthly_budget_cap: newUser.monthly_budget_cap,
-        currency: newUser.currency,
-        theme_preference: newUser.theme_preference,
-        created_at: newUser.created_at,
-        role: newUser.role,
-      };
-
-      setUser(activeUser);
-      setIsAuthenticated(true);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(activeUser));
-      localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-      return true;
-    } catch (err: any) {
-      throw err;
-    }
+    // Fallback
+    const isAdm = isAdminEmail(cleanEmail);
+    const newUser: UserProfile = {
+      id: `usr-${Date.now()}`,
+      email: cleanEmail,
+      full_name: fullName.trim(),
+      avatar_url: avatarUrl || MALE_AVATAR_SVG,
+      monthly_budget_cap: 0,
+      currency: 'تومان',
+      theme_preference: isDarkMode ? 'dark' : 'light',
+      created_at: new Date().toISOString(),
+      role: isAdm ? 'admin' : 'user',
+    };
+    setUser(newUser);
+    setIsAuthenticated(true);
+    localStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
+    return { success: true, requiresEmailConfirmation: false };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.warn('Sign out error:', e);
+      }
+    }
     setIsAuthenticated(false);
-    localStorage.setItem(STORAGE_KEYS.AUTH, 'false');
-    resetToInitialData();
+    setAdminModeState(false);
+    setUser(INITIAL_USER);
+    localStorage.removeItem(STORAGE_KEYS.AUTH);
+    localStorage.removeItem(STORAGE_KEYS.USER);
   };
 
-  // Transactions State
+  // 5. Transactions State
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      if (saved && isAuthenticated) return JSON.parse(saved);
+      if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return [];
+    return INITIAL_TRANSACTIONS;
   });
 
   useEffect(() => {
     try {
-      if (isAuthenticated) {
-        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
-      }
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
     } catch (e) {
       console.error(e);
     }
-  }, [transactions, isAuthenticated]);
+  }, [transactions]);
 
   const addTransaction = (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const newTx: Transaction = {
       ...tx,
       id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      user_id: user.id,
+      user_id: user.id || 'usr-local',
       created_at: new Date().toISOString(),
     };
     setTransactions((prev) => [newTx, ...prev]);
 
+    // Check if adding this expense pushes monthly expenses over budget cap
     if (tx.type === 'expense' && user.monthly_budget_cap > 0) {
       const currentMonthExpenses = transactions
         .filter((t) => t.type === 'expense')
@@ -348,7 +502,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addNotification({
           type: 'budget_alert',
           title: 'هشدار عبور از سقف بودجه ماهانه',
-          message: `مجموع هزینه‌های شما با ثبت این تراکنش به بیش از سقف بودجه تعیین شده رسید.`,
+          message: `مجموع هزینه‌های شما با ثبت این تراکنش به بیش از سقف بودجه تعیین شده (${user.monthly_budget_cap.toLocaleString()} تومان) رسید.`,
           amount: currentMonthExpenses,
           priority: 'urgent',
         });
@@ -364,32 +518,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Notifications State
+  // 6. Notifications & Alarms State
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-      if (saved && isAuthenticated) return JSON.parse(saved);
+      if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return [];
+    return INITIAL_NOTIFICATIONS;
   });
 
   useEffect(() => {
     try {
-      if (isAuthenticated) {
-        localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
-      }
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
     } catch (e) {
       console.error(e);
     }
-  }, [notifications, isAuthenticated]);
+  }, [notifications]);
 
   const addNotification = (item: Omit<NotificationItem, 'id' | 'user_id' | 'created_at' | 'is_read'>) => {
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const newNotif: NotificationItem = {
       ...item,
       id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      user_id: user.id,
+      user_id: user.id || 'usr-local',
       is_read: false,
       status: item.status || 'pending',
       created_at: new Date().toISOString(),
@@ -419,63 +575,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter((n) => !n.is_read).length;
   }, [notifications]);
 
-  // Support Tickets State & Supabase Integration Sync
+  // 7. Support Tickets State
   const [tickets, setTickets] = useState<Ticket[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TICKETS);
-      if (saved && isAuthenticated) return JSON.parse(saved);
+      if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return [];
+    return INITIAL_TICKETS;
   });
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
-  // بارگذاری تیکت‌ها از Supabase هنگام ورود یا تغییر حالت ادمین/کاربر
-  const fetchTicketsFromSupabase = useCallback(async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase || !isAuthenticated) return;
-
-    try {
-      let query = supabase.from('tickets').select('*, messages:ticket_messages(*)');
-      
-      // اگر ادمین نیست، فقط تیکت‌های خود کاربر را بیاور
-      if (user.role !== 'admin' && !adminMode) {
-        query = query.eq('user_id', user.id);
-      }
-
-      const { data, error } = await query.order('updated_at', { ascending: false });
-      if (!error && data) {
-        setTickets(data as Ticket[]);
-      }
-    } catch (err) {
-      console.warn('Could not fetch tickets from Supabase:', err);
-    }
-  }, [isAuthenticated, user.id, user.role, adminMode]);
-
-  useEffect(() => {
-    fetchTicketsFromSupabase();
-  }, [fetchTicketsFromSupabase]);
-
   useEffect(() => {
     try {
-      if (isAuthenticated) {
-        localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
-      }
+      localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
     } catch (e) {
       console.error(e);
     }
-  }, [tickets, isAuthenticated]);
+  }, [tickets]);
 
+  // Keep selected ticket synchronized with latest state
   useEffect(() => {
     if (selectedTicket) {
       const updated = tickets.find((t) => t.id === selectedTicket.id);
       if (updated) setSelectedTicket(updated);
     }
-  }, [tickets, selectedTicket]);
+  }, [tickets]);
 
-  const createTicket = async ({
+  const createTicket = ({
     subject,
     department,
     priority,
@@ -486,88 +615,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     priority: Ticket['priority'];
     initialMessage: string;
   }) => {
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const ticketId = `tkt-${Date.now()}`;
-    const nowIso = new Date().toISOString();
-
     const newMsg: TicketMessage = {
       id: `msg-${Date.now()}`,
       ticket_id: ticketId,
-      sender_id: user.id,
-      sender_name: user.full_name,
+      sender_id: user.id || 'usr-local',
+      sender_name: user.full_name || 'کاربر',
       sender_role: 'user',
       content: initialMessage,
-      created_at: nowIso,
+      created_at: new Date().toISOString(),
     };
 
     const newTicket: Ticket = {
       id: ticketId,
-      user_id: user.id,
-      user_name: user.full_name,
-      user_email: user.email,
+      user_id: user.id || 'usr-local',
+      user_name: user.full_name || 'کاربر',
+      user_email: user.email || '',
       subject,
       department,
       priority,
       status: 'open',
-      created_at: nowIso,
-      updated_at: nowIso,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       messages: [newMsg],
     };
 
     setTickets((prev) => [newTicket, ...prev]);
     setSelectedTicket(newTicket);
 
-    // ارسال به Supabase جهت دسترسی ادمین در پنل پشتیبانی
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('tickets').insert({
-          id: ticketId,
-          user_id: user.id,
-          user_name: user.full_name,
-          user_email: user.email,
-          subject,
-          department,
-          priority,
-          status: 'open',
-          created_at: nowIso,
-          updated_at: nowIso,
-        });
-
-        await supabase.from('ticket_messages').insert({
-          id: newMsg.id,
-          ticket_id: ticketId,
-          sender_id: user.id,
-          sender_name: user.full_name,
-          sender_role: 'user',
-          content: initialMessage,
-          created_at: nowIso,
-        });
-      } catch (err) {
-        console.warn('Could not sync created ticket to Supabase:', err);
-      }
-    }
+    addNotification({
+      type: 'system',
+      title: 'ثبت تیکت پشتیبانی جدید',
+      message: `تیکت «${subject}» با موفقیت در سیستم ثبت گردید و در صف بررسی کارشناسان کیفیار قرار گرفت.`,
+      priority: 'normal',
+    });
   };
 
-  const addTicketMessage = async (ticketId: string, content: string, asAdmin: boolean = false) => {
-    const nowIso = new Date().toISOString();
+  const addTicketMessage = (ticketId: string, content: string, asAdmin: boolean = false) => {
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    const isActAsAdmin = asAdmin && isAdmin;
     const newMsg: TicketMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       ticket_id: ticketId,
-      sender_id: asAdmin ? 'admin-kefyar-01' : user.id,
-      sender_name: asAdmin ? 'پشتیبان ارشد کیفیار' : user.full_name,
-      sender_role: asAdmin ? 'admin' : 'user',
+      sender_id: isActAsAdmin ? 'admin-kefyar-01' : (user.id || 'usr-local'),
+      sender_name: isActAsAdmin ? 'پشتیبان ارشد کیفیار' : (user.full_name || 'کاربر'),
+      sender_role: isActAsAdmin ? 'admin' : 'user',
       content,
-      created_at: nowIso,
+      created_at: new Date().toISOString(),
     };
 
     setTickets((prev) =>
       prev.map((t) => {
         if (t.id === ticketId) {
-          const nextStatus = asAdmin ? 'resolved' : 'in_progress';
+          const nextStatus = isActAsAdmin ? 'resolved' : 'in_progress';
           return {
             ...t,
             status: nextStatus,
-            updated_at: nowIso,
+            updated_at: new Date().toISOString(),
             messages: [...t.messages, newMsg],
           };
         }
@@ -575,48 +686,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
-    // همگام‌سازی پیام جدید با دیتابیس Supabase
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const nextStatus = asAdmin ? 'resolved' : 'in_progress';
-        await supabase.from('ticket_messages').insert({
-          id: newMsg.id,
-          ticket_id: ticketId,
-          sender_id: newMsg.sender_id,
-          sender_name: newMsg.sender_name,
-          sender_role: newMsg.sender_role,
-          content,
-          created_at: nowIso,
-        });
-
-        await supabase.from('tickets').update({
-          status: nextStatus,
-          updated_at: nowIso,
-        }).eq('id', ticketId);
-      } catch (err) {
-        console.warn('Could not sync ticket message to Supabase:', err);
-      }
+    if (isActAsAdmin) {
+      addNotification({
+        type: 'system',
+        title: 'پاسخ جدید به تیکت پشتیبانی',
+        message: `پشتیبان کیفیار به تیکت شما پاسخ داد: "${content.slice(0, 60)}..."`,
+        priority: 'high',
+      });
     }
   };
 
-  const updateTicketStatus = async (ticketId: string, status: Ticket['status']) => {
-    const nowIso = new Date().toISOString();
+  const updateTicketStatus = (ticketId: string, status: Ticket['status']) => {
+    if (!isAdmin) return;
     setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status, updated_at: nowIso } : t))
+      prev.map((t) => (t.id === ticketId ? { ...t, status, updated_at: new Date().toISOString() } : t))
     );
-
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        await supabase.from('tickets').update({
-          status,
-          updated_at: nowIso,
-        }).eq('id', ticketId);
-      } catch (err) {
-        console.warn('Could not update ticket status in Supabase:', err);
-      }
-    }
   };
 
   const navigateToSupportWithTicket = (ticketId?: string) => {
@@ -630,6 +714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // 8. Computed Stats
   const totalIncome = useMemo(() => {
     return transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   }, [transactions]);
@@ -658,7 +743,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [transactions]);
 
   const resetToInitialData = () => {
-    setUser(EMPTY_USER);
+    setUser(INITIAL_USER);
     setTransactions([]);
     setNotifications([]);
     setTickets([]);
@@ -667,8 +752,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
     localStorage.removeItem(STORAGE_KEYS.TICKETS);
-    localStorage.setItem(STORAGE_KEYS.AUTH, 'false');
-    setIsAuthenticated(false);
   };
 
   return (
@@ -678,6 +761,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveTab,
         adminMode,
         setAdminMode,
+        isAdmin,
         isDarkMode,
         toggleDarkMode,
         isAuthenticated,

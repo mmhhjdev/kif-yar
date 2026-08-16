@@ -16,10 +16,10 @@ import { SettingsView } from './components/SettingsView';
 import { TransactionModal } from './components/TransactionModal';
 import { ReminderModal } from './components/ReminderModal';
 import { TicketModal } from './components/TicketModal';
-import { AvatarModal } from './components/AvatarModal';
 import { AuthModal } from './components/AuthModal';
+import { AvatarModal } from './components/AvatarModal';
 import { Transaction } from './types';
-import { Plus, ShieldCheck, Lock } from 'lucide-react';
+import { Plus, ShieldCheck, Heart } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const {
@@ -30,7 +30,6 @@ const MainLayout: React.FC = () => {
     createTicket,
     isAuthModalOpen,
     setIsAuthModalOpen,
-    isAuthenticated, // استفاده از متغیر صحیح احراز هویت
   } = useApp();
 
   // Modal States
@@ -64,6 +63,7 @@ const MainLayout: React.FC = () => {
       <Header
         onOpenTransactionModal={handleOpenAddTxModal}
         onOpenReminderModal={() => setIsReminderModalOpen(true)}
+        onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
       />
 
       {/* Primary Navigation Tabs */}
@@ -92,27 +92,7 @@ const MainLayout: React.FC = () => {
         )}
 
         {activeTab === 'support' && (
-          isAuthenticated ? (
-            <SupportView onOpenTicketModal={() => setIsTicketModalOpen(true)} />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] p-6 shadow-xs">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
-                <Lock className="w-6 h-6" />
-              </div>
-              <h3 className="font-cairo text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                دسترسی به مرکز پشتیبانی نیازمند ورود است
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md">
-                برای ارسال و پیگیری تیکت‌ها و ارتباط با تیم پشتیبانی کیفیار، لطفاً ابتدا وارد حساب کاربری خود شوید.
-              </p>
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-cairo font-bold transition shadow-xs cursor-pointer"
-              >
-                ورود / ثبت‌نام در کیفیار
-              </button>
-            </div>
-          )
+          <SupportView onOpenTicketModal={() => setIsTicketModalOpen(true)} />
         )}
 
         {activeTab === 'settings' && <SettingsView />}
@@ -130,7 +110,7 @@ const MainLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* Standard Modals */}
+      {/* Modals */}
       <TransactionModal
         isOpen={isTxModalOpen}
         onClose={() => {
@@ -153,6 +133,16 @@ const MainLayout: React.FC = () => {
         onSubmit={(data) => createTicket(data)}
       />
 
+      <AvatarModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
+
       {/* Footer */}
       <footer className="mt-auto border-t border-[#E2E8E4] dark:border-[#1A2621] bg-white dark:bg-[#0C120F] py-6 text-xs text-zinc-500 dark:text-zinc-400 font-vazir">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -173,17 +163,6 @@ const MainLayout: React.FC = () => {
           </div>
         </div>
       </footer>
-
-      {/* Global Overlays & Modals */}
-      <AvatarModal
-        isOpen={isAvatarModalOpen}
-        onClose={() => setIsAvatarModalOpen(false)}
-      />
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
     </div>
   );
 };

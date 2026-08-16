@@ -20,15 +20,18 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatToman, toPersianDigits } from '../utils/formatters';
-import { AvatarModal } from './AvatarModal';
-import { AuthModal } from './AuthModal';
 
 interface HeaderProps {
   onOpenTransactionModal: () => void;
   onOpenReminderModal: () => void;
+  onOpenAvatarModal: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenReminderModal }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onOpenTransactionModal,
+  onOpenReminderModal,
+  onOpenAvatarModal,
+}) => {
   const {
     user,
     isAuthenticated,
@@ -46,11 +49,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
     navigateToSupportWithTicket,
     adminMode,
     setAdminMode,
+    isAdmin,
   } = useApp();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -117,7 +120,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
           {/* Quick Add Transaction Button */}
           <button
             id="quick-add-tx-btn"
-            onClick={onOpenTransactionModal}
+            onClick={() => {
+              if (!isAuthenticated) {
+                setIsAuthModalOpen(true);
+              } else {
+                onOpenTransactionModal();
+              }
+            }}
             className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-95 text-white text-xs sm:text-sm font-cairo font-bold shadow-xs transition cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
@@ -260,7 +269,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
                   <button
                     onClick={() => {
                       setIsNotifOpen(false);
-                      onOpenReminderModal();
+                      if (!isAuthenticated) {
+                        setIsAuthModalOpen(true);
+                      } else {
+                        onOpenReminderModal();
+                      }
                     }}
                     className="text-emerald-800 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                   >
@@ -292,7 +305,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsAvatarModalOpen(true);
+                    onOpenAvatarModal();
                     setIsProfileMenuOpen(false);
                   }}
                   title="تغییر تصویر پروفایل"
@@ -318,7 +331,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
                   <div className="p-4 border-b border-[#E2E8E4] dark:border-[#1A2621] bg-emerald-50/30 dark:bg-[#121F19] flex items-center gap-3">
                     <div
                       onClick={() => {
-                        setIsAvatarModalOpen(true);
+                        onOpenAvatarModal();
                         setIsProfileMenuOpen(false);
                       }}
                       title="تغییر تصویر پروفایل"
@@ -341,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
                   <div className="p-2 space-y-1 font-cairo">
                     <button
                       onClick={() => {
-                        setIsAvatarModalOpen(true);
+                        onOpenAvatarModal();
                         setIsProfileMenuOpen(false);
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
@@ -372,27 +385,29 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
                       مرکز تیکت و پشتیبانی کیفیار
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setAdminMode(!adminMode);
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        پنل پشتیبان (Admin Mode)
-                      </span>
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                          adminMode
-                            ? 'bg-emerald-700 text-white'
-                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-                        }`}
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          setAdminMode(!adminMode);
+                          setIsProfileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
                       >
-                        {adminMode ? 'فعال' : 'غیرفعال'}
-                      </span>
-                    </button>
+                        <span className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          پنل پشتیبان (Admin Mode)
+                        </span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                            adminMode
+                              ? 'bg-emerald-700 text-white'
+                              : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          {adminMode ? 'فعال' : 'غیرفعال'}
+                        </span>
+                      </button>
+                    )}
 
                     <div className="border-t border-[#E2E8E4] dark:border-[#1A2621] my-1" />
 
@@ -424,18 +439,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenTransactionModal, onOpenRe
           )}
         </div>
       </div>
-
-      {/* Avatar Picker & Upload Modal */}
-      <AvatarModal
-        isOpen={isAvatarModalOpen}
-        onClose={() => setIsAvatarModalOpen(false)}
-      />
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
     </header>
   );
 };

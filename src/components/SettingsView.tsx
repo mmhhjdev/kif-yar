@@ -56,7 +56,7 @@ export const SettingsView: React.FC = () => {
   // Save Profile Handler
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    const capNum = parseInt(budgetCap, 10) || 25000000;
+    const capNum = parseInt(budgetCap, 10) || 0;
     updateUserProfile({
       full_name: fullName.trim(),
       email: email.trim(),
