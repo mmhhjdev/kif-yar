@@ -64,16 +64,15 @@ export const AnalyticsView: React.FC = () => {
       .sort((a, b) => b.value - a.value);
   }, [scopedTransactions]);
 
-  // Monthly / Periodic Trend data
-  const trendData = useMemo(() => {
-    return [
-      { name: 'فروردین', income: 38000000, expense: 24500000 },
-      { name: 'اردیبهشت', income: 42000000, expense: 29000000 },
-      { name: 'خرداد', income: 45000000, expense: 31200000 },
-      { name: 'تیر', income: 51000000, expense: 34000000 },
-      { name: 'مرداد', income: totalIncome, expense: totalExpense },
-    ];
-  }, [totalIncome, totalExpense]);
+const trendData = useMemo(() => {
+  return [
+    { name: 'فروردین', income: 0, expense: 0 },
+    { name: 'اردیبهشت', income: 0, expense: 0 },
+    { name: 'خرداد', income: 0, expense: 0 },
+    { name: 'تیر', income: 0, expense: 0 },
+    { name: 'مرداد', income: 0, expense: 0 },
+  ];
+}, []);
 
   // Savings rate calculation
   const savingsRate = useMemo(() => {
