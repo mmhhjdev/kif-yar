@@ -64,15 +64,15 @@ export const AnalyticsView: React.FC = () => {
       .sort((a, b) => b.value - a.value);
   }, [scopedTransactions]);
 
-const trendData = useMemo(() => {
-  return [
-    { name: 'فروردین', income: 0, expense: 0 },
-    { name: 'اردیبهشت', income: 0, expense: 0 },
-    { name: 'خرداد', income: 0, expense: 0 },
-    { name: 'تیر', income: 0, expense: 0 },
-    { name: 'مرداد', income: 0, expense: 0 },
-  ];
-}, []);
+  const trendData = useMemo(() => {
+    return [
+      { name: 'فروردین', income: 0, expense: 0 },
+      { name: 'اردیبهشت', income: 0, expense: 0 },
+      { name: 'خرداد', income: 0, expense: 0 },
+      { name: 'تیر', income: 0, expense: 0 },
+      { name: 'مرداد', income: 0, expense: 0 },
+    ];
+  }, []);
 
   // Savings rate calculation
   const savingsRate = useMemo(() => {
@@ -80,6 +80,13 @@ const trendData = useMemo(() => {
     const net = totalIncome - totalExpense;
     return Math.max(0, Math.round((net / totalIncome) * 100));
   }, [totalIncome, totalExpense]);
+
+  // Dynamic Financial Health Score calculation
+  const healthScore = useMemo(() => {
+    if (totalIncome <= 0 && totalExpense <= 0) return 0;
+    const score = Math.min(100, Math.max(0, 50 + (savingsRate * 1.5)));
+    return Math.round(score);
+  }, [totalIncome, totalExpense, savingsRate]);
 
   // Custom Tooltip for Persian Toman
   const CustomPieTooltip = ({ active, payload }: any) => {
@@ -205,10 +212,10 @@ const trendData = useMemo(() => {
           <div>
             <span className="font-cairo text-xs font-bold text-zinc-600 dark:text-zinc-400">امتیاز سلامت مالی کیفیار</span>
             <h3 className="font-cairo text-2xl font-black text-emerald-800 dark:text-emerald-300 mt-1">
-              {toPersianDigits(88)} / ۱۰۰
+              {toPersianDigits(healthScore)} / ۱۰۰
             </h3>
             <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
-              سطح سلامت: خیلی خوب (A+)
+              {healthScore >= 80 ? 'سطح سلامت: خیلی خوب (A+)' : healthScore >= 50 ? 'سطح سلامت: متوسط (B)' : 'نیازمند بهبود و پایش مالی'}
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-[#14201A] dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-900/40">
@@ -322,7 +329,7 @@ const trendData = useMemo(() => {
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
           <h4 className="font-cairo text-base font-bold text-zinc-900 dark:text-zinc-100">
-            توصیه‌های هوشمند مدیریت مالی کیفیار
+            تصیه‌های هوشمند مدیریت مالی کیفیار
           </h4>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
