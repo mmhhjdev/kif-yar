@@ -139,8 +139,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
   const isAdmin = useMemo(() => {
-    return isAuthenticated && isAdminEmail(user?.email);
-  }, [isAuthenticated, user?.email]);
+    return isAuthenticated && (isAdminEmail(user?.email) || user?.role === 'admin');
+  }, [isAuthenticated, user?.email, user?.role]);
 
   const setAdminMode = useCallback((enabled: boolean) => {
     if (enabled && !isAdmin) {
@@ -151,17 +151,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAdminModeState(enabled);
   }, [isAdmin]);
 
-  // تابع کمکی برای بارگذاری داده‌های کاربر از Supabase
-  const fetchUserDataFromSupabase = async (userId: string) => {
+  // بارگذاری امن اطلاعات کاربر و تفکیک تیکت‌های ادمین و کاربر عادی
+  const fetchUserDataFromSupabase = async (userId: string, userEmail: string) => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
     try {
       // 1. دریافت پروفایل
       const { data: profileData } = await supabase.from('users').select('*').eq('id', userId).single();
-      if (profileData) {
-        setUser((prev) => ({ ...prev, ...profileData }));
+      let currentRole = profileData?.role || 'user';
+      
+      if (isAdminEmail(userEmail)) {
+        currentRole = 'admin';
       }
+
+      const mergedUser = {
+        ...INITIAL_USER,
+        ...profileData,
+        id: userId,
+        email: userEmail,
+        role: currentRole,
+      };
+
+      setUser(mergedUser);
 
       // 2. دریافت تراکنش‌ها
       const { data: txData } = await supabase.from('transactions').select('*').eq('user_id', userId).order('created_at', { ascending: false });
@@ -172,13 +184,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (notifData) setNotifications(notifData);
 
       // 4. دریافت تیکت‌ها (اگر ادمین باشد همه را می‌گیرد، وگرنه تیکت‌های خودش را)
-      const isAdm = isAdminEmail(profileData?.email);
+      const isAdm = currentRole === 'admin' || isAdminEmail(userEmail);
       let ticketQuery = supabase.from('tickets').select('*').order('updated_at', { ascending: false });
+      
       if (!isAdm) {
         ticketQuery = ticketQuery.eq('user_id', userId);
       }
-      const { data: ticketData } = await ticketQuery;
-      if (ticketData) setTickets(ticketData);
+      
+      const { data: ticketData, error: ticketError } = await ticketQuery;
+      if (!ticketError && ticketData) {
+        setTickets(ticketData);
+      } else {
+        console.error('Error fetching tickets:', ticketError);
+      }
 
     } catch (err) {
       console.error('Error fetching user data from Supabase:', err);
@@ -192,41 +210,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        const isAdm = isAdminEmail(session.user.email);
-        const activeUser: UserProfile = {
-          id: session.user.id,
-          email: session.user.email || '',
-          full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'کاربر کیفیار',
-          avatar_url: session.user.user_metadata?.avatar_url || MALE_AVATAR_SVG,
-          monthly_budget_cap: session.user.user_metadata?.monthly_budget_cap || 0,
-          currency: 'تومان',
-          theme_preference: isDarkMode ? 'dark' : 'light',
-          role: isAdm ? 'admin' : 'user',
-          created_at: session.user.created_at,
-        };
-        setUser(activeUser);
+        const email = session.user.email || '';
+        const isAdm = isAdminEmail(email);
         setIsAuthenticated(true);
-        fetchUserDataFromSupabase(session.user.id);
+        fetchUserDataFromSupabase(session.user.id, email);
       }
     }).catch(console.error);
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        const isAdm = isAdminEmail(session.user.email);
-        const activeUser: UserProfile = {
-          id: session.user.id,
-          email: session.user.email || '',
-          full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'کاربر کیفیار',
-          avatar_url: session.user.user_metadata?.avatar_url || MALE_AVATAR_SVG,
-          monthly_budget_cap: session.user.user_metadata?.monthly_budget_cap || 0,
-          currency: 'تومان',
-          theme_preference: isDarkMode ? 'dark' : 'light',
-          role: isAdm ? 'admin' : 'user',
-          created_at: session.user.created_at,
-        };
-        setUser(activeUser);
+        const email = session.user.email || '';
         setIsAuthenticated(true);
-        fetchUserDataFromSupabase(session.user.id);
+        fetchUserDataFromSupabase(session.user.id, email);
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setUser(INITIAL_USER);
@@ -241,7 +236,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [isDarkMode]);
+  }, []);
 
   const updateUserProfile = async (updated: Partial<UserProfile>) => {
     setUser((prev) => ({ ...prev, ...updated }));
@@ -257,6 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           monthly_budget_cap: updated.monthly_budget_cap ?? user.monthly_budget_cap,
           theme_preference: updated.theme_preference ?? user.theme_preference,
           currency: updated.currency ?? user.currency,
+          role: user.role,
           updated_at: new Date().toISOString(),
         });
       } catch (err) {
@@ -344,7 +340,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTickets([]);
   };
 
-  // مدیریت تراکنش‌ها با دیتابیس
   const addTransaction = async (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {
     if (!isAuthenticated) {
       setIsAuthModalOpen(true);
@@ -368,8 +363,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase.from('transactions').insert([newTxData]).select().single();
       if (!error && data) {
         setTransactions((prev) => [data, ...prev]);
-      } else {
-        console.error('Error adding transaction:', error);
       }
     }
   };
@@ -390,7 +383,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // مدیریت نوتیفیکیشن‌ها با دیتابیس
   const addNotification = async (item: Omit<NotificationItem, 'id' | 'user_id' | 'created_at' | 'is_read'>) => {
     if (!isAuthenticated) return;
 
@@ -451,7 +443,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return notifications.filter((n) => !n.is_read).length;
   }, [notifications]);
 
-  // مدیریت تیکت‌ها با دیتابیس
   const createTicket = async ({
     subject,
     department,
@@ -509,7 +500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newMsg: TicketMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       ticket_id: ticketId,
-      sender_id: isActAsAdmin ? 'admin-kefyar-01' : user.id,
+      sender_id: isActAsAdmin ? user.id : user.id,
       sender_name: isActAsAdmin ? 'پشتیبان ارشد کیفیار' : (user.full_name || 'کاربر'),
       sender_role: isActAsAdmin ? 'admin' : 'user',
       content,
@@ -567,7 +558,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // محاسبات آماری
   const totalIncome = useMemo(() => {
     return transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   }, [transactions]);
