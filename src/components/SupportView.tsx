@@ -28,6 +28,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
     isAdmin,
     isAuthenticated,
     setIsAuthModalOpen,
+    currentUser, // اضافه شده برای دریافت اطلاعات کاربر جاری
   } = useApp();
 
   const [replyText, setReplyText] = useState('');
@@ -36,7 +37,13 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
 
   // Filtered tickets
   const filteredTickets = tickets.filter((t) => {
+    // اگر پنل ادمین فعال نباشد، فقط تیکت‌های خودِ کاربر نشان داده شود
+    if (!adminMode && currentUser && t.user_id !== currentUser.id) {
+      return false;
+    }
+
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+    
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
@@ -122,7 +129,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
         </div>
 
         <div className="flex items-center gap-2.5 font-cairo">
-          {/* Admin Mode Switch Button - Strictly for authorized admins */}
           {isAdmin && (
             <button
               id="toggle-admin-support-mode-btn"
@@ -203,7 +209,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[500px]">
         {/* Left Column: Tickets List (5 cols) */}
         <div className="lg:col-span-5 bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs flex flex-col overflow-hidden">
-          {/* List Header & Search */}
           <div className="p-4 border-b border-[#E2E8E4] dark:border-[#1A2621] space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-cairo text-base font-bold text-zinc-900 dark:text-zinc-100">
@@ -211,7 +216,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
               </span>
             </div>
 
-            {/* Search */}
             <div className="relative">
               <Search className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2" />
               <input
@@ -223,7 +227,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
               />
             </div>
 
-            {/* Filter Status Pills */}
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-xs font-cairo">
               <button
                 onClick={() => setStatusFilter('all')}
@@ -258,7 +261,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
             </div>
           </div>
 
-          {/* Tickets Scroll List */}
           <div className="flex-1 overflow-y-auto divide-y divide-zinc-100 dark:divide-[#1A2621]/60 p-2 space-y-1">
             {filteredTickets.length === 0 ? (
               <div className="p-8 text-center text-xs text-zinc-500 dark:text-zinc-400 space-y-3">
@@ -325,7 +327,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
         <div className="lg:col-span-7 bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs flex flex-col overflow-hidden">
           {activeTicket ? (
             <>
-              {/* Ticket Details Header */}
               <div className="p-4 border-b border-[#E2E8E4] dark:border-[#1A2621] bg-zinc-50/50 dark:bg-[#121A16] space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
@@ -337,7 +338,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                     </span>
                   </div>
 
-                  {/* Status update controls (for Admin mode) */}
                   <div className="flex items-center gap-1.5">
                     {isAdmin && adminMode && (
                       <select
@@ -367,7 +367,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                 </div>
               </div>
 
-              {/* Chat Timeline Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[380px]">
                 {activeTicket.messages.map((msg) => {
                   const isMsgAdmin = msg.sender_role === 'admin';
@@ -378,7 +377,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                         isMsgAdmin ? 'flex-row' : 'flex-row-reverse'
                       }`}
                     >
-                      {/* Avatar */}
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                           isMsgAdmin
@@ -389,7 +387,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                         {isMsgAdmin ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
                       </div>
 
-                      {/* Bubble */}
                       <div
                         className={`max-w-[80%] p-3.5 rounded-2xl ${
                           isMsgAdmin
@@ -417,7 +414,6 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                 })}
               </div>
 
-              {/* Reply Input Bar */}
               <form
                 onSubmit={handleSendReply}
                 className="p-3 border-t border-[#E2E8E4] dark:border-[#1A2621] bg-zinc-50/50 dark:bg-[#121A16] flex items-center gap-2"
