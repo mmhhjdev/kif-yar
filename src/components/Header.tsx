@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
             />
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="font-cairo font-black text-lg text-zinc-900 dark:text-zinc-100 tracking-tight">
+                <span className="font-brand font-black text-lg text-zinc-900 dark:text-zinc-100 tracking-tight">
                   کیفیار
                 </span>
                 <span className="text-[10px] font-vazir px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-bold">
