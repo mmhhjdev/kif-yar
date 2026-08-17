@@ -5,6 +5,7 @@
 // لیست ایمیل‌های مجاز برای دسترسی به پنل مدیریت پشتیبان (Admin Support)
 export const ADMIN_EMAILS: string[] = [
   'seyedmahanhejrati@gmail.com',
+  'mahan.hejrati91@gmail.com',
 ];
 
 /**
