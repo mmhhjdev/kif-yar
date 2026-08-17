@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, PlusCircle, ArrowUpRight, ArrowDownLeft, Tag, Calendar, Wallet } from 'lucide-react';
 import { Transaction, TransactionCategory, TransactionType } from '../types';
 import { CATEGORY_METADATA, formatToman } from '../utils/formatters';
+import { toJalaali, toGregorian } from 'jalaali-js'; // <--- تغییر در اینجا
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -36,6 +37,30 @@ const ACCOUNTS: Array<'کارت اصلی' | 'حساب پس‌انداز' | 'کی
   'کارت تنخواه',
 ];
 
+// تبدیل تاریخ میلادی (YYYY-MM-DD) به شمسی (YYYY/MM/DD)
+const gregorianToJalaaliStr = (gDateStr: string) => {
+  try {
+    const [gy, gm, gd] = gDateStr.split('-').map(Number);
+    if (!gy || !gm || !gd) return '';
+    const j = toJalaali(gy, gm, gd);
+    return `${j.jy}/${j.jm.toString().padStart(2, '0')}/${j.jd.toString().padStart(2, '0')}`;
+  } catch {
+    return '';
+  }
+};
+
+// تبدیل تاریخ شمسی (YYYY/MM/DD) به میلادی (YYYY-MM-DD) برای ذخیره در دیتابیس
+const jalaaliToGregorianStr = (jDateStr: string) => {
+  try {
+    const [jy, jm, jd] = jDateStr.split('/').map(Number);
+    if (!jy || !jm || !jd) return new Date().toISOString().split('T')[0];
+    const g = toGregorian(jy, jm, jd); // <--- تغییر در اینجا
+    return `${g.gy}-${g.gm.toString().padStart(2, '0')}-${g.gd.toString().padStart(2, '0')}`;
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
+};
+
 export const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
@@ -45,7 +70,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState<string>('');
   const [category, setCategory] = useState<TransactionCategory>('خوراک و رستوران');
-  const [date, setDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  
+  // استیت تاریخ شمسی به صورت متن YYYY/MM/DD
+  const [jalaliDate, setJalaliDate] = useState<string>(() => {
+    return gregorianToJalaaliStr(new Date().toISOString().split('T')[0]);
+  });
+
   const [description, setDescription] = useState<string>('');
   const [account, setAccount] = useState<'کارت اصلی' | 'حساب پس‌انداز' | 'کیف پول نقد' | 'کارت تنخواه'>('کارت اصلی');
   const [tagInput, setTagInput] = useState<string>('');
@@ -56,7 +86,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setType(editingTransaction.type);
       setAmount(editingTransaction.amount.toString());
       setCategory(editingTransaction.category);
-      setDate(editingTransaction.date);
+      // تبدیل تاریخ میلادی ذخیره شده به شمسی برای نمایش در فرم ویرایش
+      setJalaliDate(gregorianToJalaaliStr(editingTransaction.date));
       setDescription(editingTransaction.description);
       setAccount(editingTransaction.account);
       setTags(editingTransaction.tags || []);
@@ -64,7 +95,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setType('expense');
       setAmount('');
       setCategory('خوراک و رستوران');
-      setDate(new Date().toISOString().split('T')[0]);
+      setJalaliDate(gregorianToJalaaliStr(new Date().toISOString().split('T')[0]));
       setDescription('');
       setAccount('کارت اصلی');
       setTags([]);
@@ -89,6 +120,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setAmount(val);
   };
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^0-9\/]/g, '');
+    setJalaliDate(val);
+  };
+
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && tagInput.trim()) {
       e.preventDefault();
@@ -110,11 +146,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       return;
     }
 
+    // تبدیل تاریخ شمسی وارد شده به میلادی استاندارد برای ارسال به دیتابیس
+    const gregDate = jalaaliToGregorianStr(jalaliDate);
+
     onSubmit({
       type,
       amount: numAmount,
       category,
-      date,
+      date: gregDate,
       description: description.trim() || (type === 'expense' ? 'هزینه ثبت شده' : 'درآمد ثبت شده'),
       account,
       tags,
@@ -126,7 +165,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const numAmount = parseInt(amount, 10) || 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs font-vazir">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs font-vazir">
       <div
         id="transaction-modal-card"
         className="w-full max-w-lg bg-white dark:bg-[#0F1512] rounded-2xl shadow-2xl border border-[#E2E8E4] dark:border-[#1A2621] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
@@ -262,15 +301,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <div>
               <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
-                تاریخ تراکنش
+                تاریخ تراکنش (شمسی)
               </label>
               <input
-                id="tx-date-input"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none"
-              />
+               id="tx-date-input"
+               type="text"
+               value={jalaliDate}
+               onChange={handleDateChange}
+               placeholder="1405/06/18"
+               maxLength={10}
+               className="w-full px-3 py-2.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none text-center font-vazir"
+/>
             </div>
           </div>
 

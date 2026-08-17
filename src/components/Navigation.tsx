@@ -7,6 +7,7 @@ import {
   LifeBuoy,
   Settings,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ActiveTab } from '../types';
@@ -45,6 +46,11 @@ export const Navigation: React.FC = () => {
       icon: BellRing,
       badge: unreadNotificationsCount,
       badgeColor: 'bg-emerald-600 dark:bg-emerald-500 text-white',
+    },
+    {
+      id: 'dong' as ActiveTab, // تب جدید دنگ و تسویه
+      label: 'دنگ و تسویه',
+      icon: Users,
     },
     {
       id: 'support',

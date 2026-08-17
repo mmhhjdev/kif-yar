@@ -13,6 +13,7 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { RemindersView } from './components/RemindersView';
 import { SupportView } from './components/SupportView';
 import { SettingsView } from './components/SettingsView';
+import { DongView } from './components/DongView'; // 👈 ایمپورت کامپوننت دنگ و تسویه
 import { TransactionModal } from './components/TransactionModal';
 import { ReminderModal } from './components/ReminderModal';
 import { TicketModal } from './components/TicketModal';
@@ -90,6 +91,8 @@ const MainLayout: React.FC = () => {
         {activeTab === 'reminders' && (
           <RemindersView onOpenAddReminderModal={() => setIsReminderModalOpen(true)} />
         )}
+
+        {activeTab === 'dong' && <DongView />} {/* 👈 نمایش پنل دنگ و تسویه */}
 
         {activeTab === 'support' && (
           <SupportView onOpenTicketModal={() => setIsTicketModalOpen(true)} />

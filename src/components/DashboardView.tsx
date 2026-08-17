@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -21,7 +21,6 @@ import {
   formatCompactToman,
   toPersianDigits,
   formatShamsiDate,
-  CATEGORY_METADATA,
 } from '../utils/formatters';
 
 interface DashboardViewProps {
@@ -35,27 +34,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const {
     user,
-    transactions,
-    totalIncome,
-    totalExpense,
-    netBalance,
-    monthlyBudgetCap,
-    budgetUtilizationPercent,
-    notifications,
+    transactions = [],
+    totalIncome = 0,
+    totalExpense = 0,
+    netBalance = 0,
+    monthlyBudgetCap = 0,
+    budgetUtilizationPercent = 0,
+    notifications = [],
     setActiveTab,
     navigateToSupportWithTicket,
-    expensesByCategory,
+    expensesByCategory = {},
   } = useApp();
 
-  const recentTransactions = transactions.slice(0, 6);
-  const pendingDebts = notifications.filter((n) => n.type === 'debt_reminder' && n.status === 'pending');
-  const upcomingChecks = notifications.filter((n) => n.type === 'check_due' && n.status === 'pending');
+  const recentTransactions = useMemo(() => transactions.slice(0, 6), [transactions]);
+  
+  const pendingDebts = useMemo(
+    () => notifications.filter((n) => n?.type === 'debt_reminder' && n?.status === 'pending'),
+    [notifications]
+  );
+  
+  const upcomingChecks = useMemo(
+    () => notifications.filter((n) => n?.type === 'check_due' && n?.status === 'pending'),
+    [notifications]
+  );
+
   const remainingBudget = Math.max(monthlyBudgetCap - totalExpense, 0);
 
-  // Top spending categories
-  const sortedCategories = (Object.entries(expensesByCategory) as [string, number][])
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 4);
+  // Top spending categories with safety checks
+  const sortedCategories = useMemo(() => {
+    return (Object.entries(expensesByCategory || {}) as [string, number][])
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 4);
+  }, [expensesByCategory]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200 font-vazir">
@@ -64,7 +74,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="font-cairo text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-              سلام، {user.full_name} عزیز
+              سلام، {user?.full_name || 'کاربر'} عزیز
             </h2>
             <span className="inline-flex items-center gap-1 text-[11px] font-cairo font-bold px-2 py-0.5 rounded-full bg-emerald-100/70 text-emerald-800 dark:bg-[#121F19] dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-900/50">
               <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
@@ -117,7 +127,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {formatToman(totalIncome)}
             </h3>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-              <span>{toPersianDigits(transactions.filter((t) => t.type === 'income').length)} تراکنش واریزی</span>
+              <span>{toPersianDigits(transactions.filter((t) => t?.type === 'income').length)} تراکنش واریزی</span>
             </div>
           </div>
         </div>
@@ -135,7 +145,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {formatToman(totalExpense)}
             </h3>
             <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-              <span>{toPersianDigits(transactions.filter((t) => t.type === 'expense').length)} فقره هزینه ماه جاری</span>
+              <span>{toPersianDigits(transactions.filter((t) => t?.type === 'expense').length)} فقره هزینه ماه جاری</span>
             </div>
           </div>
         </div>
@@ -166,7 +176,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     ? 'bg-emerald-600 dark:bg-emerald-400'
                     : 'bg-emerald-700 dark:bg-emerald-500'
                 }`}
-                style={{ width: `${budgetUtilizationPercent}%` }}
+                style={{ width: `${Math.min(budgetUtilizationPercent, 100)}%` }}
               />
             </div>
           </div>
@@ -228,7 +238,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <button
           id="dash-support-btn"
-          onClick={() => navigateToSupportWithTicket()}
+          onClick={() => navigateToSupportWithTicket?.()}
           className="p-4 rounded-2xl bg-white hover:bg-emerald-50 dark:bg-[#0F1512] dark:hover:bg-[#16201B] text-emerald-900 dark:text-emerald-300 border border-emerald-300/70 dark:border-emerald-900/60 shadow-xs transition flex flex-col items-center justify-center gap-2 cursor-pointer text-center group"
         >
           <div className="p-2.5 rounded-xl bg-emerald-100/70 dark:bg-[#1A2822] group-hover:scale-105 transition text-emerald-700 dark:text-emerald-400">
@@ -266,7 +276,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             ) : (
               recentTransactions.map((tx) => {
-                const meta = CATEGORY_METADATA[tx.category];
+                if (!tx) return null;
                 return (
                   <div
                     key={tx.id}
@@ -349,27 +359,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   یادآور یا بدهی فعالی وجود ندارد.
                 </div>
               ) : (
-                [...pendingDebts, ...upcomingChecks].slice(0, 3).map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-3 rounded-xl bg-emerald-50/40 dark:bg-[#121F19] border border-emerald-200/50 dark:border-emerald-900/40 text-xs flex items-start gap-2.5"
-                  >
-                    {item.type === 'debt_reminder' ? (
-                      <Users className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <CalendarCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-cairo font-bold text-zinc-900 dark:text-zinc-100 truncate">{item.title}</p>
-                      <p className="text-zinc-500 dark:text-zinc-400 text-[11px] truncate mt-0.5">{item.message}</p>
-                      {item.amount && (
-                        <span className="font-bold text-emerald-800 dark:text-emerald-300 text-[11px] mt-1 block">
-                          {formatToman(item.amount)}
-                        </span>
+                [...pendingDebts, ...upcomingChecks].slice(0, 3).map((item) => {
+                  if (!item) return null;
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-xl bg-emerald-50/40 dark:bg-[#121F19] border border-emerald-200/50 dark:border-emerald-900/40 text-xs flex items-start gap-2.5"
+                    >
+                      {item.type === 'debt_reminder' ? (
+                        <Users className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <CalendarCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
                       )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-cairo font-bold text-zinc-900 dark:text-zinc-100 truncate">{item.title}</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-[11px] truncate mt-0.5">{item.message}</p>
+                        {item.amount && (
+                          <span className="font-bold text-emerald-800 dark:text-emerald-300 text-[11px] mt-1 block">
+                            {formatToman(item.amount)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -417,7 +430,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div
                         className="h-full rounded-full bg-emerald-600 dark:bg-emerald-400 transition-all"
                         style={{
-                          width: `${percent}%`,
+                          width: `${Math.min(percent, 100)}%`,
                         }}
                       />
                     </div>

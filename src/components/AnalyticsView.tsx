@@ -16,6 +16,8 @@ import {
   Award,
   Zap,
   TrendingUp,
+  AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -52,7 +54,6 @@ export const AnalyticsView: React.FC = () => {
         sums[t.category] = (sums[t.category] || 0) + t.amount;
       });
 
-    // Clean green/monochrome color scale for professional UI
     const emeraldScale = ['#047857', '#059669', '#10B981', '#34D399', '#064E3B', '#52525B', '#71717A', '#A1A1AA'];
 
     return Object.entries(sums)
@@ -87,6 +88,61 @@ export const AnalyticsView: React.FC = () => {
     const score = Math.min(100, Math.max(0, 50 + (savingsRate * 1.5)));
     return Math.round(score);
   }, [totalIncome, totalExpense, savingsRate]);
+
+  // 1. هوش مصنوعی جدید: پیش‌بینی وضعیت مالی در پایان ماه
+  const financialForecast = useMemo(() => {
+    const now = new Date();
+    const currentDayOfMonth = now.getDate() || 1;
+    // تخمین بر اساس ماه ۳۰ روزه
+    const daysInMonth = 30;
+    const remainingDays = Math.max(0, daysInMonth - currentDayOfMonth);
+
+    const dailyAverageExpense = currentDayOfMonth > 0 ? totalExpense / currentDayOfMonth : 0;
+    const projectedTotalExpense = totalExpense + (dailyAverageExpense * remainingDays);
+    const projectedNet = totalIncome - projectedTotalExpense;
+
+    return {
+      dailyAverageExpense: Math.round(dailyAverageExpense),
+      projectedTotalExpense: Math.round(projectedTotalExpense),
+      projectedNet: Math.round(projectedNet),
+      isDeficitWarning: projectedNet < 0,
+    };
+  }, [totalIncome, totalExpense]);
+
+  // 2. هشدارهای پویا بر اساس بالاترین سهم هزینه
+  const dynamicAlerts = useMemo(() => {
+    if (categoryData.length === 0) return [];
+    const totalExp = categoryData.reduce((acc, curr) => acc + curr.value, 0);
+    const alerts = [];
+
+    // بررسی بالاترین دسته‌بندی هزینه
+    const topCategory = categoryData[0];
+    const topPercent = totalExp > 0 ? Math.round((topCategory.value / totalExp) * 100) : 0;
+
+    if (topPercent > 35) {
+      alerts.push({
+        title: `تمرکز بالای هزینه در «${topCategory.name}»`,
+        desc: `این دسته حدود ${toPersianDigits(topPercent)}٪ از کل هزینه‌های شما را به خود اختصاص داده است. بازنگری در این بخش بیشترین تاثیر را در بهبود پس‌انداز دارد.`,
+        type: 'warning',
+      });
+    }
+
+    if (financialForecast.isDeficitWarning) {
+      alerts.push({
+        title: 'هشدار کسری بودجه احتمالی',
+        desc: `با روند فعلی خرج‌کرد روزانه، پیش‌بینی می‌شود تا پایان ماه هزینه‌ها از درآمد پیشی بگیرد. کنترل هزینه‌های متفرقه توصیه می‌شود.`,
+        type: 'danger',
+      });
+    } else {
+      alerts.push({
+        title: 'روند پایدار مالی',
+        desc: `پیش‌بینی می‌شود ماه را با ${formatToman(Math.abs(financialForecast.projectedNet))} مازاد یا تعادل مثبت به پایان برسانید.`,
+        type: 'success',
+      });
+    }
+
+    return alerts;
+  }, [categoryData, financialForecast]);
 
   // Custom Tooltip for Persian Toman
   const CustomPieTooltip = ({ active, payload }: any) => {
@@ -224,6 +280,33 @@ export const AnalyticsView: React.FC = () => {
         </div>
       </div>
 
+      {/* NEW: Financial Forecasting Widget */}
+      <div className="bg-gradient-to-r from-emerald-900 to-zinc-900 text-white p-6 rounded-2xl shadow-md space-y-3 relative overflow-hidden">
+        <div className="absolute left-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-emerald-400" />
+          <h3 className="font-cairo text-base font-bold text-emerald-100">
+            پیش‌بینی هوشمند وضعیت مالی در پایان ماه (برآورد الگوریتمی)
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 text-sm">
+          <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
+            <span className="text-zinc-300 text-xs block">میانگین هزینه روزانه</span>
+            <span className="font-bold text-emerald-300 mt-1 block">{formatToman(financialForecast.dailyAverageExpense)}</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
+            <span className="text-zinc-300 text-xs block">پیش‌بینی کل هزینه‌ها تا پایان ماه</span>
+            <span className="font-bold text-white mt-1 block">{formatToman(financialForecast.projectedTotalExpense)}</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/10">
+            <span className="text-zinc-300 text-xs block">تراز پیش‌بینی‌شده پایان ماه</span>
+            <span className={`font-bold mt-1 block ${financialForecast.isDeficitWarning ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {formatToman(financialForecast.projectedNet)}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Donut Chart - Category Distribution */}
@@ -324,14 +407,34 @@ export const AnalyticsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Smart Recommendations Section */}
-      <div className="bg-white dark:bg-[#0F1512] p-6 rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] space-y-3">
+      {/* Smart Recommendations & Dynamic Alerts Section */}
+      <div className="bg-white dark:bg-[#0F1512] p-6 rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] space-y-4">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
           <h4 className="font-cairo text-base font-bold text-zinc-900 dark:text-zinc-100">
-            تصیه‌های هوشمند مدیریت مالی کیفیار
+            توصیه‌ها و هشدارهای پویا مدیریت مالی کیفیار
           </h4>
         </div>
+        
+        {/* Dynamic AI Generated Alerts */}
+        {dynamicAlerts.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {dynamicAlerts.map((alert, idx) => (
+              <div key={idx} className="p-4 bg-amber-50/50 dark:bg-[#1f1a14] rounded-xl border border-amber-200/50 dark:border-amber-900/40 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-cairo font-bold text-amber-900 dark:text-amber-300 block mb-1">
+                    {alert.title}
+                  </span>
+                  <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                    {alert.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
           <div className="p-4 bg-emerald-50/50 dark:bg-[#14201A] rounded-xl border border-emerald-200/50 dark:border-emerald-900/40">
             <span className="font-cairo font-bold text-emerald-900 dark:text-emerald-300 block mb-1">
