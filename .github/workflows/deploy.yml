@@ -33,6 +33,8 @@ jobs:
         with:
           path: ./dist
 
+#هیابتسنیالتالتنیبالبتلاتنسلاتنیس
+
   deploy:
     environment:
       name: github-pages
