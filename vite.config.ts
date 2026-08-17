@@ -14,8 +14,11 @@ export default defineConfig(() => {
     },
     build: {
       outDir: 'dist',
+      
       assetsDir: 'assets',
+
       sourcemap: false,
+
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
