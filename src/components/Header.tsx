@@ -5,7 +5,6 @@ import {
   Moon,
   PlusCircle,
   LifeBuoy,
-  CheckCircle2,
   AlertTriangle,
   Users,
   CalendarCheck,
@@ -20,6 +19,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatToman, toPersianDigits } from '../utils/formatters';
+
+// ایمپورت لوگو از پوشه src (چون پوشه public ندارید)
+import logoImage from '@/assets/images/logo.png';
 
 interface HeaderProps {
   onOpenTransactionModal: () => void;
@@ -96,22 +98,11 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2.5 text-right group focus:outline-none cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-xl bg-emerald-700 dark:bg-emerald-600 flex items-center justify-center text-white shadow-sm group-hover:bg-emerald-800 dark:group-hover:bg-emerald-500 transition duration-200">
-              <span className="font-brand font-bold text-xl select-none">ک</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-brand text-2xl font-bold tracking-tight text-[#090D0B] dark:text-[#F8FAF9]">
-                  کیفیار
-                </span>
-                <span className="font-cairo text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 dark:bg-[#121F19] dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-900/50">
-                  kifyar
-                </span>
-              </div>
-              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block -mt-1 font-vazir font-normal hidden sm:block">
-                سامانه مدیریت مالی و حسابداری
-              </span>
-            </div>
+            <img 
+              src={logoImage} 
+              alt="لوگوی کیفیار" 
+              className="h-10 w-auto object-contain" 
+            />
           </button>
         </div>
 
