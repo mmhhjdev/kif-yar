@@ -223,6 +223,9 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
             </div>
           )}
 
+
+
+
           {/* Amount & Due Date (Persian DatePicker Integrated) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -274,6 +277,11 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
               className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none resize-none"
             />
           </div>
+
+
+
+
+
 
           {/* Priority */}
           <div>
