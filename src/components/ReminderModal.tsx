@@ -5,7 +5,7 @@ import { formatToman } from '../utils/formatters';
 import DatePicker from 'react-multi-date-picker';
 import persian from 'react-date-object/calendars/persian';
 import persian_fa from 'react-date-object/locales/persian_fa';
-import { toPersianDigits } from '../utils/formatters'; // یا پکیج تبدیل اعداد
+import { toPersianDigits } from '../utils/formatters';
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -19,12 +19,8 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
   const [message, setMessage] = useState('');
   const [amount, setAmount] = useState('');
   
-  // نگهداری تاریخ به صورت شیء یا رشته شمسی
-  const [dueDate, setDueDate] = useState<any>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 3);
-    return d.toISOString().split('T')[0];
-  });
+  // اصلاح مقدار اولیه: خالی گذاشتن برای جلوگیری از نمایش تاریخ میلادی
+  const [dueDate, setDueDate] = useState<any>('');
 
   const [personName, setPersonName] = useState('');
   const [priority, setPriority] = useState<'normal' | 'high' | 'urgent'>('high');
@@ -89,7 +85,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
       title: finalTitle,
       message: finalMessage,
       amount: numAmount,
-      due_date: formattedDate,
+      due_date: formattedDate || undefined,
       person_name: personName.trim() || undefined,
       priority,
       status: 'pending',
@@ -206,7 +202,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
             />
           </div>
 
-          {/* Person Name (for debt/split bill) */}
+          {/* Person Name */}
           {type === 'debt_reminder' && (
             <div>
               <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
@@ -223,10 +219,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
             </div>
           )}
 
-
-
-
-          {/* Amount & Due Date (Persian DatePicker Integrated) */}
+          {/* Amount & Due Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
@@ -277,11 +270,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
               className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none resize-none"
             />
           </div>
-
-
-
-
-
 
           {/* Priority */}
           <div>
