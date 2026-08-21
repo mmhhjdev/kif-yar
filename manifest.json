@@ -1,0 +1,20 @@
+{
+  "short_name": "کیفیار",
+  "name": "کیفیار - سامانه هوشمند مالی",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090D0B",
+  "theme_color": "#059669",
+  "display": "standalone"
+}
