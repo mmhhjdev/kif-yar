@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Calculator, Trash2, ArrowRight, Receipt, UserPlus, X } from 'lucide-react';
 import { formatToman, toPersianDigits } from '../utils/formatters';
-import { getSupabaseClient } from '../lib/supabase'; // ایمپورت صحیح تابع کلاینت سوپابیس شما
+import { getSupabaseClient } from '../lib/supabase';
 
 interface ExpenseItem {
   id: string;
@@ -27,7 +27,8 @@ interface TransferDebt {
 export const DongView: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   const [isNewGroupModalOpen, setIsNewGroupModalOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -39,15 +40,32 @@ export const DongView: React.FC = () => {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
 
-  // دریافت گروه‌ها از Supabase
+  // بررسی وضعیت احراز هویت و دریافت گروه‌ها از Supabase
   useEffect(() => {
-    fetchGroups();
+    const checkAuthAndFetch = async () => {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setLoading(false);
+        setIsAuthenticated(false);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      await fetchGroups(supabase);
+    };
+
+    checkAuthAndFetch();
   }, []);
 
-  const fetchGroups = async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
+  const fetchGroups = async (supabase: any) => {
     setLoading(true);
     const { data: groupsData, error: groupsError } = await supabase
       .from('dong_groups')
@@ -282,6 +300,21 @@ export const DongView: React.FC = () => {
 
   const optimalTransfers = calculateOptimalTransfers();
 
+  // نمایش پیام در صورت بارگذاری یا عدم احراز هویت کاربر
+  if (loading) {
+    return <div className="py-12 text-center text-zinc-500 font-vazir">در حال بارگذاری اطلاعات...</div>;
+  }
+
+  if (isAuthenticated === false) {
+    return (
+      <div className="p-12 text-center bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] space-y-3 font-vazir shadow-xs">
+        <Users className="w-12 h-12 text-amber-500 mx-auto" />
+        <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-cairo">نیاز به ورود به حساب کاربری</h3>
+        <p className="text-xs text-zinc-500">برای مشاهده و مدیریت دنگ‌ها و تسویه حساب‌ها، لطفاً ابتدا وارد حساب کاربری خود شوید.</p>
+      </div>
+    );
+  }
+
   if (!activeGroup) {
     return (
       <div className="space-y-6 animate-in fade-in duration-200 font-vazir">
@@ -304,9 +337,7 @@ export const DongView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {loading ? (
-            <div className="col-span-full py-12 text-center text-zinc-500">در حال بارگذاری اطلاعات...</div>
-          ) : groups.length === 0 ? (
+          {groups.length === 0 ? (
             <div className="col-span-full py-12 text-center bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] p-8">
               <Users className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
               <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">هنوز هیچ گروهی ساخته نشده است</p>
@@ -475,7 +506,6 @@ export const DongView: React.FC = () => {
               <div key={idx} className="bg-white dark:bg-[#0A0F0D] p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/40 shadow-xs flex items-center justify-between">
                 <div className="text-xs space-y-1">
                   <span className="text-zinc-500 block">باید پرداخت کند:</span>
-                  {/* اعمال dir="ltr" برای نمایش صحیح بدهکار و طلبکار به همراه فلش */}
                   <div dir="ltr" className="flex items-center justify-start gap-1 font-bold text-sm">
                     <span className="text-rose-600 dark:text-rose-400">{t.from}</span>
                     <span className="text-zinc-400">➔</span>

@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { X, Bell, Users, CalendarCheck, AlertTriangle, Receipt } from 'lucide-react';
 import { NotificationItem, NotificationType } from '../types';
 import { formatToman } from '../utils/formatters';
+import DatePicker from 'react-multi-date-picker';
+import persian from 'react-date-object/calendars/persian';
+import persian_fa from 'react-date-object/locales/persian_fa';
+import { toPersianDigits } from '../utils/formatters'; // یا پکیج تبدیل اعداد
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -14,11 +18,14 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [amount, setAmount] = useState('');
-  const [dueDate, setDueDate] = useState(() => {
+  
+  // نگهداری تاریخ به صورت شیء یا رشته شمسی
+  const [dueDate, setDueDate] = useState<any>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 3);
     return d.toISOString().split('T')[0];
   });
+
   const [personName, setPersonName] = useState('');
   const [priority, setPriority] = useState<'normal' | 'high' | 'urgent'>('high');
 
@@ -46,6 +53,20 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
     }
   };
 
+  // تابع درخواست و نمایش نوتیفیکیشن مرورگر
+  const triggerBrowserNotification = async (notifTitle: string, notifBody: string) => {
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification(notifTitle, { body: notifBody });
+      } else if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          new Notification(notifTitle, { body: notifBody });
+        }
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -54,16 +75,29 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
 
     const numAmount = amount ? parseInt(amount, 10) : undefined;
 
+    // استخراج مقدار تاریخ شمسی به صورت رشته قابل نمایش
+    let formattedDate = dueDate;
+    if (typeof dueDate === 'object' && dueDate !== null && typeof dueDate.format === 'function') {
+      formattedDate = dueDate.format('YYYY/MM/DD');
+    }
+
+    const finalTitle = title.trim();
+    const finalMessage = message.trim() || 'یادآور مالی ثبت‌شده در کیفیار';
+
     onSubmit({
       type,
-      title: title.trim(),
-      message: message.trim() || 'یادآور مالی ثبت‌شده در کیفیار',
+      title: finalTitle,
+      message: finalMessage,
       amount: numAmount,
-      due_date: dueDate,
+      due_date: formattedDate,
       person_name: personName.trim() || undefined,
       priority,
       status: 'pending',
     });
+
+    // فعال‌سازی نوتیفیکیشن مرورگر هنگام ثبت موفق یادآور
+    triggerBrowserNotification(`کیفیار: ${finalTitle}`, finalMessage);
+
     onClose();
   };
 
@@ -189,7 +223,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
             </div>
           )}
 
-          {/* Amount & Due Date */}
+          {/* Amount & Due Date (Persian DatePicker Integrated) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
@@ -212,14 +246,16 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
 
             <div>
               <label className="block text-xs font-cairo font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                تاریخ موعد / سررسید
+                تاریخ موعد / سررسید (شمسی)
               </label>
-              <input
-                id="reminder-duedate-input"
-                type="date"
+              <DatePicker
+                calendar={persian}
+                locale={persian_fa}
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none"
+                onChange={setDueDate}
+                containerClassName="w-full"
+                inputClass="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none cursor-pointer"
+                placeholder="انتخاب تاریخ شمسی..."
               />
             </div>
           </div>
@@ -274,7 +310,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, o
             <button
               id="submit-reminder-btn"
               type="submit"
-              className="px-6 py-2.5 rounded-xl text-sm font-cairo font-bold text-white bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-xs transition flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl text-sm font-cairo font-bold text-white bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-xs transition flex items-center gap-2 cursor-pointer"
             >
               <Bell className="w-4 h-4" />
               ثبت یادآور هوشمند
