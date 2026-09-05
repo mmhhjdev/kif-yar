@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>صفحه مورد نظر پیدا نشد | کیفیار</title>
+  <link rel="icon" type="image/png" href="./logo.png" />
+  <!-- فونت وزیرمتن و Tailwind -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Vazirmatn', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              500: '#10b981',
+              600: '#059669',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+      background-color: #0b0f17;
+      color: #f3f4f6;
+    }
+    .glow-effect {
+      background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 60%);
+    }
+    .floating {
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-12px) rotate(2deg); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden select-none">
+
+  <!-- پس‌زمینه نوری گرادینت -->
+  <div class="absolute inset-0 glow-effect pointer-events-none"></div>
+  <div class="absolute -top-32 -left-32 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-32 -right-32 w-80 h-80 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- کانتینر کارت اصلی -->
+  <div class="relative z-10 max-w-lg w-full bg-gray-900/80 backdrop-blur-xl border border-gray-800/80 rounded-3xl p-8 sm:p-12 shadow-2xl text-center">
+    
+    <!-- لوگو و آیکون شناور -->
+    <div class="relative mb-6 flex justify-center">
+      <div class="floating relative flex items-center justify-center w-24 h-24 rounded-2xl bg-gradient-to-tr from-emerald-500/20 to-emerald-400/5 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+        <!-- آیکون کیف‌پول / خطای مالی -->
+        <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 12a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+        </svg>
+        <span class="absolute -top-2 -right-2 bg-emerald-500 text-gray-950 font-black text-xs px-2 py-0.5 rounded-full ring-4 ring-gray-900">!</span>
+      </div>
+    </div>
+
+    <!-- عدد ۴۰۴ بزرگ -->
+    <h1 class="text-7xl sm:text-8xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white via-gray-200 to-gray-600 mb-2">
+      ۴۰۴
+    </h1>
+
+    <!-- پیام وضعیت -->
+    <h2 class="text-xl sm:text-2xl font-bold text-gray-100 mb-3">
+      مسیر را گم کرده‌اید؟
+    </h2>
+    <p class="text-gray-400 text-sm sm:text-base leading-relaxed mb-8">
+      صفحه‌ای که به دنبال آن هستید حذف شده، تغییر نام یافته یا موقتاً در دسترس نیست. نگران نباشید، موجودی و حساب‌های شما امن است!
+    </p>
+
+    <!-- دکمه‌های اقدام -->
+    <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+      <a href="/" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-gray-950 font-bold transition-all duration-200 shadow-lg shadow-emerald-500/25 active:scale-95">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        بازگشت به صفحه اصلی
+      </a>
+
+      <button onclick="window.history.back()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 font-medium border border-gray-700 transition-all duration-200 active:scale-95">
+        صفحه قبل
+      </button>
+    </div>
+
+    <!-- فوتر پایین کارت -->
+    <div class="mt-8 pt-6 border-t border-gray-800/60 flex items-center justify-center gap-2 text-xs text-gray-500">
+      <span>پلتفرم مدیریت مالی کیفیار</span>
+      <span>•</span>
+      <span dir="ltr">kif-yar.ir</span>
+    </div>
+
+  </div>
+
+</body>
+</html>
