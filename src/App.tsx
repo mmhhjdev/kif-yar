@@ -13,25 +13,26 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { RemindersView } from './components/RemindersView';
 import { SupportView } from './components/SupportView';
 import { SettingsView } from './components/SettingsView';
-import { DongView } from './components/DongView'; // 👈 ایمپورت کامپوننت دنگ و تسویه
+import { DongView } from './components/DongView';
 import { TransactionModal } from './components/TransactionModal';
 import { ReminderModal } from './components/ReminderModal';
 import { TicketModal } from './components/TicketModal';
 import { AuthModal } from './components/AuthModal';
 import { AvatarModal } from './components/AvatarModal';
 import { Transaction } from './types';
-import { Plus, ShieldCheck, Heart } from 'lucide-react';
+import { Plus, ShieldCheck } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const {
     activeTab,
+    setActiveTab,
     addTransaction,
     updateTransaction,
     addNotification,
     createTicket,
     isAuthModalOpen,
     setIsAuthModalOpen,
-  } = useApp();
+  } = useApp() as any;
 
   // Modal States
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
@@ -58,19 +59,17 @@ const MainLayout: React.FC = () => {
     }
   };
 
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAF9] dark:bg-[#0A0F0D] text-zinc-900 dark:text-zinc-100 font-vazir transition-colors duration-200">
-      {/* Top Application Header */}
       <Header
         onOpenTransactionModal={handleOpenAddTxModal}
         onOpenReminderModal={() => setIsReminderModalOpen(true)}
         onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
       />
 
-      {/* Primary Navigation Tabs */}
       <Navigation />
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'dashboard' && (
           <DashboardView
@@ -92,7 +91,7 @@ const MainLayout: React.FC = () => {
           <RemindersView onOpenAddReminderModal={() => setIsReminderModalOpen(true)} />
         )}
 
-        {activeTab === 'dong' && <DongView />} {/* 👈 نمایش پنل دنگ و تسویه */}
+        {activeTab === 'dong' && <DongView />}
 
         {activeTab === 'support' && (
           <SupportView onOpenTicketModal={() => setIsTicketModalOpen(true)} />
@@ -101,7 +100,6 @@ const MainLayout: React.FC = () => {
         {activeTab === 'settings' && <SettingsView />}
       </main>
 
-      {/* Floating Action Button for Mobile */}
       <div className="md:hidden fixed bottom-6 left-6 z-40">
         <button
           id="mobile-fab-add-btn"
@@ -113,7 +111,6 @@ const MainLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* Modals */}
       <TransactionModal
         isOpen={isTxModalOpen}
         onClose={() => {
@@ -146,7 +143,6 @@ const MainLayout: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
       />
 
-      {/* Footer */}
       <footer className="mt-auto border-t border-[#E2E8E4] dark:border-[#1A2621] bg-white dark:bg-[#0C120F] py-6 text-xs text-zinc-500 dark:text-zinc-400 font-vazir">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">

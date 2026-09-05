@@ -5,27 +5,20 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: './', // استفاده از مسیر نسبی برای سازگاری با GitHub Pages
+    base: './',
     plugins: [react(), tailwindcss()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
+    resolve: { 
+      alias: { '@': path.resolve(__dirname, '.') } 
     },
-    build: {
-      outDir: 'dist',
-      
-      assetsDir: 'assets',
-
-      sourcemap: false,
-
+    build: { 
+      outDir: 'dist', 
+      assetsDir: 'assets', 
+      sourcemap: false, // جلوگیری از ساخت نقشه سورس و حذف پوشه src از مرورگر
+      minify: 'esbuild',
     },
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    esbuild: {
+      drop: ['console', 'debugger'], // حذف کامل لاگ‌ها
+      legalComments: 'none',        // حذف کامنت‌های توضیحی
     },
   };
 });
