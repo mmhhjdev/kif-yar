@@ -1,49 +1,117 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" prefix="og: https://ogp.me/ns#">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     
-    <!-- SEO Meta Tags -->
-    <title>کیفیار (kifyar) | سامانه هوشمند مدیریت مالی، حسابداری شخصی و تقسیم دنگ</title>
-    <meta name="description" content="کیفیار (kifyar) - سامانه جامع مدیریت مالی شخصی، حسابداری، گزارش‌های تحلیلی پیشرفته، یادآورهای مالی و تقسیم دنگ و هزینه‌های گروهی و سفر." />
-    <meta name="keywords" content="کیفیار, kifyar, مدیریت مالی شخصی, حسابداری شخصی, تقسیم دنگ, اپلیکیشن حسابداری, مدیریت هزینه‌ها, تسویه حساب سفر" />
-    <meta name="author" content="کیفیار" />
-    <meta name="robots" content="index, follow" />
+    <!-- 1. Security Meta Headers (افزایش نمره امنیت موزیلا و حفاظت در برابر XSS/Clickjacking) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-    <!-- Open Graph / Social Media (Telegram, WhatsApp, LinkedIn) -->
+    <!-- 2. Primary SEO Meta Tags (عنوان و توضیحات هدفمند) -->
+    <title>کیفیار (kifyar) | سامانه هوشمند مدیریت مالی شخصی و محاسبه دنگ</title>
+    <meta name="title" content="کیفیار (kifyar) | سامانه هوشمند مدیریت مالی شخصی و محاسبه دنگ" />
+    <meta name="description" content="کیفیار (Kifyar)؛ جامع‌ترین اپلیکیشن و وب‌اپلیکیشن رایگان مدیریت هزینه‌ها، بودجه‌بندی هوشمند، گزارش‌های مالی تحلیلی، یادآور چک و اقساط، و محاسبه عادلانه دنگ و خرج‌های گروهی سفر." />
+    <meta name="keywords" content="کیفیار, kifyar, مدیریت مالی شخصی, حسابداری شخصی رایگان, محاسبه دنگ, تقسیم دنگ سفر, اپلیکیشن دخل و خرج, مدیریت بودجه, یادآور چک و اقساط, گزارش مالی" />
+    <meta name="author" content="تیم توسعه کیفیار" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <link rel="canonical" href="https://kif-yar.ir/" />
+
+    <!-- 3. Open Graph / Facebook / Telegram / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="کیفیار (kifyar) | سامانه هوشمند مدیریت مالی و حسابداری شخصی" />
-    <meta property="og:description" content="مدیریت آسان هزینه‌ها، گزارش‌های مالی هوشمند و تقسیم عادلانه دنگ با کیفیار." />
-    <meta property="og:image" content="/logo.png" />
+    <meta property="og:url" content="https://kif-yar.ir/" />
+    <meta property="og:title" content="کیفیار (kifyar) | هوشمندترین ابزار مدیریت مالی و دنگ گروهی" />
+    <meta property="og:description" content="دخل و خرجت رو مدیریت کن، بودجه‌بندی کن و دنگ سفرهات رو بدون دردسر حساب کن." />
+    <meta property="og:image" content="https://kif-yar.ir/logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="لوگوی رسمی کیفیار - حسابداری شخصی و دنگ" />
     <meta property="og:site_name" content="کیفیار (Kifyar)" />
     <meta property="og:locale" content="fa_IR" />
 
-    <!-- Twitter Card Meta Tags -->
+    <!-- 4. Twitter / X Cards -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://kif-yar.ir/" />
     <meta name="twitter:title" content="کیفیار (kifyar) | سامانه هوشمند مدیریت مالی و حسابداری شخصی" />
     <meta name="twitter:description" content="مدیریت آسان هزینه‌ها، گزارش‌های مالی هوشمند و تقسیم عادلانه دنگ با کیفیار." />
-    <meta name="twitter:image" content="/logo.png" />
+    <meta name="twitter:image" content="https://kif-yar.ir/logo.png" />
 
-    <!-- Theme Color for Browsers -->
+    <!-- 5. PWA & Mobile Web App Meta Tags -->
+    <meta name="application-name" content="کیفیار" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="کیفیار" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- 6. Theme Color for Browser Tabs -->
     <meta name="theme-color" content="#090D0B" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#F8FAF9" media="(prefers-color-scheme: light)" />
 
-    <!-- Favicon & Apple Touch Icons -->
+    <!-- 7. Favicon & Apple Touch Icons -->
     <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
     <link rel="shortcut icon" href="/logo.png" />
-    
-    <!-- Apple iOS Safari Icons -->
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
-
     <link rel="manifest" href="/manifest.json" />
 
-    <!-- Google Fonts Preconnect -->
+    <!-- 8. Performance Preconnects (بارگذاری سریع‌تر فونت‌ها) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Reem+Kufi:wght@400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- 9. Structured Data (JSON-LD) برای درک کامل موتورهای جستجو و نمایش Rich Snippets در گوگل -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://kif-yar.ir/#webapp",
+          "name": "کیفیار",
+          "alternateName": ["Kifyar", "kif-yar", "سامانه مدیریت مالی کیفیار"],
+          "url": "https://kif-yar.ir/",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "All",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "inLanguage": "fa-IR",
+          "description": "سامانه هوشمند و امن مدیریت دخل و خرج شخصی، تحلیل هوشمند جریان نقدینگی، یادآور بدهی و بستانکاری و تسویه دنگ گروهی.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "IRR"
+          },
+          "featureList": [
+            "ثبت و دسته‌بندی درآمدها و هزینه‌ها",
+            "محاسبه هوشمند و تسویه عادلانه دنگ سفر و خرج‌های گروهی",
+            "گزارش‌های تحلیلی و نمودارهای مالی پیشرفته",
+            "سیستم یادآور سررسید اقساط، چک و بدهی‌ها",
+            "رمزنگاری ابری داده‌ها با بالاترین سطح امنیت"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://kif-yar.ir/#website",
+          "url": "https://kif-yar.ir/",
+          "name": "کیفیار (kifyar)",
+          "inLanguage": "fa-IR",
+          "description": "سامانه آنلاین مدیریت مالی شخصی و تقسیم دنگ",
+          "publisher": {
+            "@type": "Organization",
+            "name": "کیفیار",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://kif-yar.ir/logo.png"
+            }
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body class="bg-[#F8FAF9] text-zinc-900 dark:bg-[#090D0B] dark:text-zinc-100 min-h-screen transition-colors duration-200 selection:bg-emerald-600 selection:text-white font-vazir">
     <div id="root"></div>
