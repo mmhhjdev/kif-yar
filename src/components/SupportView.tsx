@@ -28,7 +28,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
     isAdmin,
     isAuthenticated,
     setIsAuthModalOpen,
-    currentUser,
+    currentUser, // اضافه شده برای دریافت اطلاعات کاربر جاری
   } = useApp();
 
   const [replyText, setReplyText] = useState('');
@@ -37,13 +37,13 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
 
   // Filtered tickets
   const filteredTickets = tickets.filter((t) => {
-    // If not admin mode, only show tickets for current user
-    if (!adminMode && currentUser && t.user_id !== currentUser.id && t.user_email !== currentUser.email) {
+    // اگر پنل ادمین فعال نباشد، فقط تیکت‌های خودِ کاربر نشان داده شود
+    if (!adminMode && currentUser && t.user_id !== currentUser.id) {
       return false;
     }
 
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
-
+    
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
@@ -108,13 +108,13 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 font-cairo">
+    <div className="space-y-6 animate-in fade-in duration-200 font-vazir">
       {/* Top Header with Admin Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="font-cairo text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              مرکز پشتیبانی و تیکت‌های <span className="font-brand text-emerald-800 dark:text-emerald-400">چندبوم</span>
+              مرکز پشتیبانی و تیکت‌های <span className="font-brand text-emerald-800 dark:text-emerald-400">کیفیار</span>
             </h2>
             {isAdmin && adminMode && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-cairo font-bold bg-emerald-700 text-white flex items-center gap-1 shadow-xs">
@@ -124,7 +124,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
             )}
           </div>
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-            ارتباط مستقیم و دوطرفه با کارشناسان و تیم پشتیبانی چندبوم
+            ارتباط مستقیم و دوطرفه با کارشناسان و تیم پشتیبانی کیفیار
           </p>
         </div>
 
@@ -193,7 +193,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
           <div className="flex items-center gap-2 text-emerald-950 dark:text-emerald-200">
             <Shield className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
             <span>
-              <strong>شما در پنل ادمین هستید:</strong> می‌توانید وضعیت تیکت‌ها را تغییر دهید و به عنوان «پشتیبان رسمی چندبوم» به کاربران پاسخ ارسال کنید.
+              <strong>شما در پنل ادمین هستید:</strong> می‌توانید وضعیت تیکت‌ها را تغییر دهید و به عنوان «پشتیبان رسمی کیفیار» به کاربران پاسخ ارسال کنید.
             </span>
           </div>
           <button
@@ -207,7 +207,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
 
       {/* Main 2 Column Support Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[500px]">
-        {/* Left Column: Tickets List */}
+        {/* Left Column: Tickets List (5 cols) */}
         <div className="lg:col-span-5 bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs flex flex-col overflow-hidden">
           <div className="p-4 border-b border-[#E2E8E4] dark:border-[#1A2621] space-y-3">
             <div className="flex items-center justify-between">
@@ -223,7 +223,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="جستجو در تیکت‌ها..."
-                className="w-full pr-9 pl-3 py-1.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-xs text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600 font-cairo"
+                className="w-full pr-9 pl-3 py-1.5 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-xs text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600 font-vazir"
               />
             </div>
 
@@ -323,7 +323,7 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
           </div>
         </div>
 
-        {/* Right Column: Active Ticket Conversation */}
+        {/* Right Column: Active Ticket Conversation (7 cols) */}
         <div className="lg:col-span-7 bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs flex flex-col overflow-hidden">
           {activeTicket ? (
             <>
@@ -403,11 +403,11 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                               </span>
                             )}
                           </span>
-                          <span className="text-[10px] text-zinc-400 font-cairo">
+                          <span className="text-[10px] text-zinc-400 font-vazir">
                             {formatShamsiDate(msg.created_at)}
                           </span>
                         </div>
-                        <p className="whitespace-pre-wrap font-cairo leading-relaxed">{msg.content}</p>
+                        <p className="whitespace-pre-wrap font-vazir leading-relaxed">{msg.content}</p>
                       </div>
                     </div>
                   );
@@ -425,10 +425,10 @@ export const SupportView: React.FC<SupportViewProps> = ({ onOpenTicketModal }) =
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder={
                     isAdmin && adminMode
-                      ? 'ارسال پاسخ به عنوان پشتیبان رسمی چندبوم...'
+                      ? 'ارسال پاسخ به عنوان پشتیبان رسمی کیفیار...'
                       : 'پاسخ یا توضیحات تکمیلی خود را بنویسید...'
                   }
-                  className="flex-1 px-4 py-2.5 bg-white dark:bg-[#0F1512] border border-[#E2E8E4] dark:border-[#1A2621] rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none font-cairo"
+                  className="flex-1 px-4 py-2.5 bg-white dark:bg-[#0F1512] border border-[#E2E8E4] dark:border-[#1A2621] rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-600 outline-none font-vazir"
                 />
                 <button
                   id="send-ticket-reply-btn"

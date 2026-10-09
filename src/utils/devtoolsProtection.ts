@@ -1,95 +1,60 @@
 /**
- * Security and Anti-Inspection Protection Utility for Financial App «چی؟ چند؟»
- * Prevents DevTools inspection, hides source code from Sources tab,
- * disables context menu, shortcuts, and sets debugger traps.
+ * DevTools & Source Protection for Kefyar
+ * - Detects open DevTools (size check + debugger timing)
+ * - Blocks right-click, F12, Ctrl+Shift+I/J/C, Ctrl+U
+ * - On detection: redirects to about:blank (user can close tab via history back)
  */
 
-export function initSecurityProtection(onDevToolsDetected?: () => void): () => void {
-  // 1. Console Warning against Self-XSS & Code Tampering
-  if (typeof window !== 'undefined') {
-    const bannerStyle = 'color: #ef4444; font-size: 20px; font-weight: bold; font-family: sans-serif;';
-    const subStyle = 'color: #10b981; font-size: 13px; font-family: sans-serif;';
-    console.log('%c⚠️ اخطار امنیتی سامانه مالی چی؟ چند؟', bannerStyle);
-    console.log(
-      '%cهرگونه دسترسی غیرمجاز یا تزریق کدهای مخرب پیگرد قانونی دارد. کدهای منبع جهت حفاظت از حریم داده‌های مالی کاربران به صورت کاملاً ایزوله و رمزنگاری‌شده محافظت می‌شوند.',
-      subStyle
-    );
+let devtoolsOpen = false;
+const threshold = 170;
+let checkerId: number | undefined;
 
-    // Suppress console outputs in non-debug mode to avoid leaking state
-    try {
-      const noop = () => {};
-      window.console.dir = noop;
-      window.console.table = noop;
-    } catch {
-      // Ignore if sealed
-    }
-  }
+function onDetect() {
+  if (devtoolsOpen) return;
+  devtoolsOpen = true;
+  try {
+    // Clear app data so sources/storage can't be inspected
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie.split(';').forEach(c => {
+      document.cookie = c.split('=')[0].trim() + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+    });
+  } catch {}
+  window.location.href = 'about:blank';
+}
 
-  // 2. Block Right-Click Context Menu
-  const handleContextMenu = (e: MouseEvent) => {
-    e.preventDefault();
-    return false;
+function sizeCheck() {
+  const wDiff = window.outerWidth - window.innerWidth > threshold;
+  const hDiff = window.outerHeight - window.innerHeight > threshold;
+  if ((wDiff || hDiff) && !import.meta.env.DEV) onDetect();
+}
+
+export function initDevtoolsProtection(): void {
+  if (import.meta.env.DEV) return; // never run in development
+
+  // 1) Size-based detection (polled)
+  checkerId = window.setInterval(sizeCheck, 1500);
+
+  // 2) Timing-based detection (debugger statement pauses execution)
+  const timingCheck = () => {
+    const start = performance.now();
+    // eslint-disable-next-line no-debugger
+    debugger;
+    if (performance.now() - start > 100) onDetect();
   };
+  window.setInterval(timingCheck, 5000);
 
-  // 3. Block Developer Key Combinations (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S)
-  const handleKeyDown = (e: KeyboardEvent) => {
-    // F12
-    if (e.key === 'F12' || e.keyCode === 123) {
-      e.preventDefault();
-      e.stopPropagation();
-      onDevToolsDetected?.();
-      return false;
-    }
+  // 3) Block context menu and shortcuts
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12') { e.preventDefault(); onDetect(); return; }
+    if (e.ctrlKey && e.shiftKey && ['I','J','C','K','i','j','c','k'].includes(e.key)) { e.preventDefault(); onDetect(); return; }
+    if (e.ctrlKey && ['u','U','s','S'].includes(e.key)) e.preventDefault();
+  });
 
-    // Ctrl + Shift + I / J / C (Windows/Linux) or Cmd + Option + I / J / C (Mac)
-    if (
-      (e.ctrlKey || e.metaKey) &&
-      e.shiftKey &&
-      (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      onDevToolsDetected?.();
-      return false;
-    }
-
-    // Ctrl + U (View Source)
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
-      e.preventDefault();
-      e.stopPropagation();
-      onDevToolsDetected?.();
-      return false;
-    }
-
-    // Ctrl + S (Save Page)
-    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-  };
-
-  // 4. DevTools Detector (threshold based on outer/inner dimensions)
-  let devToolsCheckTimer: any = null;
-  const checkDevToolsOpen = () => {
-    const threshold = 160;
-    const widthDiff = window.outerWidth - window.innerWidth > threshold;
-    const heightDiff = window.outerHeight - window.innerHeight > threshold;
-
-    if (widthDiff || heightDiff) {
-      onDevToolsDetected?.();
-    }
-  };
-
-  devToolsCheckTimer = setInterval(checkDevToolsOpen, 1500);
-
-  // 5. Attach event listeners
-  window.addEventListener('contextmenu', handleContextMenu, { capture: true });
-  window.addEventListener('keydown', handleKeyDown, { capture: true });
-
-  return () => {
-    window.removeEventListener('contextmenu', handleContextMenu, { capture: true });
-    window.removeEventListener('keydown', handleKeyDown, { capture: true });
-    if (devToolsCheckTimer) clearInterval(devToolsCheckTimer);
-  };
+  // 4) Detect via console object being opened (toString trick)
+  const el = new Image();
+  Object.defineProperty(el, 'id', { get() { onDetect(); return 'x'; } });
+  window.setInterval(() => { devtoolsOpen = false; console.log(el); console.clear(); }, 3000);
+  void checkerId;
 }

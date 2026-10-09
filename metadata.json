@@ -1,6 +1,6 @@
 {
-  "name": "چندبوم (Chandboom) - سامانه هوشمند مدیریت مالی و دنگ",
-  "description": "سامانه هوشمند و مدرن چندبوم (Chandboom): مدیریت دارایی، پیش‌بینی بودجه با هوش مصنوعی و محاسبه دنگ گروهی",
+  "name": "کیفیار (kifyar)",
+  "description": "سامانه مدیریت مالی و حسابداری شخصی کیفیار (kifyar) با طراحی حرفه‌ای سبز و سفید/مشکی، فونت کایرو و وزیرمتن، و معماری سوپابیس",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

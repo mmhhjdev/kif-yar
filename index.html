@@ -4,50 +4,46 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     
-    <!-- 1. Security Meta Headers -->
+    <!-- 1. Security Meta Headers (افزایش نمره امنیت موزیلا و حفاظت در برابر XSS/Clickjacking) -->
+<!-- Strict & Safe Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; frame-ancestors 'none';" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-    <!-- 2. Primary SEO Meta Tags -->
-    <title>چندبوم (Chandboom) - سامانه هوشمند مدیریت مالی، بودجه‌بندی و دنگ | Smart AI Finance</title>
-    <meta name="title" content="چندبوم (Chandboom) - سامانه هوشمند مدیریت مالی، بودجه‌بندی و دنگ | Smart AI Finance" />
-    <meta name="description" content="سامانه لوکس و مدرن چندبوم (Chandboom): مدیریت هوشمند دارایی، پیش‌بینی ۳ ماهه جریان نقدینگی با هوش مصنوعی، یادآور اقساط و چک و محاسبه عادلانه دنگ سفر | Next-Gen AI Financial & Budget Management." />
-    <meta name="keywords" content="چندبوم, Chandboom, chandboom, مدیریت مالی شخصی, حسابداری هوشمند, بودجه بندی هوش مصنوعی, محاسبه دنگ, پیش بینی دخل و خرج, یادآور چک و قسط, AI Budget Planner, Smart Personal Finance, Expense Tracker, Cash Flow Forecasting" />
-    <meta name="author" content="تیم چندبوم (Chandboom Team)" />
+    <!-- 2. Primary SEO Meta Tags (عنوان و توضیحات هدفمند) -->
+    <title>کیفیار (kifyar) | سامانه هوشمند مدیریت مالی شخصی و محاسبه دنگ</title>
+    <meta name="title" content="کیفیار (kifyar) | سامانه هوشمند مدیریت مالی شخصی و محاسبه دنگ" />
+    <meta name="description" content="کیفیار (Kifyar)؛ جامع‌ترین اپلیکیشن و وب‌اپلیکیشن رایگان مدیریت هزینه‌ها، بودجه‌بندی هوشمند، گزارش‌های مالی تحلیلی، یادآور چک و اقساط، و محاسبه عادلانه دنگ و خرج‌های گروهی سفر." />
+    <meta name="keywords" content="کیفیار, kifyar, مدیریت مالی شخصی, حسابداری شخصی رایگان, محاسبه دنگ, تقسیم دنگ سفر, اپلیکیشن دخل و خرج, مدیریت بودجه, یادآور چک و اقساط, گزارش مالی" />
+    <meta name="author" content="تیم توسعه کیفیار" />
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow" />
-    <link rel="canonical" href="https://chandboom.ir/" />
-
-    <!-- 2.1 Bilingual Alternate Language Links (hreflang) -->
-    <link rel="alternate" hreflang="fa" href="https://chandboom.ir/" />
-    <link rel="alternate" hreflang="en" href="https://chandboom.ir/?lang=en" />
-    <link rel="alternate" hreflang="x-default" href="https://chandboom.ir/" />
+    <link rel="canonical" href="https://kif-yar.ir/" />
 
     <!-- 3. Open Graph / Facebook / Telegram / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://chandboom.ir/" />
-    <meta property="og:title" content="چندبوم (Chandboom) - سامانه هوشمند مدیریت مالی و بودجه‌بندی" />
-    <meta property="og:description" content="کنترل هوشمند پول و ثروت شما با قدرت هوش مصنوعی چندبوم. پیش‌بینی دخل و خرج، ثبت تراکنش با متن و مدیریت بی‌نقص دارایی‌ها." />
-    <meta property="og:image" content="https://chandboom.ir/assets/logo.png" />
+    <meta property="og:url" content="https://kif-yar.ir/" />
+    <meta property="og:title" content="کیفیار (kifyar) | هوشمندترین ابزار مدیریت مالی و دنگ گروهی" />
+    <meta property="og:description" content="دخل و خرجت رو مدیریت کن، بودجه‌بندی کن و دنگ سفرهات رو بدون دردسر حساب کن." />
+    <meta property="og:image" content="https://kif-yar.ir/logo.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
-    <meta property="og:image:alt" content="لوگوی رسمی چندبوم (Chandboom) - مدیریت مالی مدرن و هوشمند" />
-    <meta property="og:site_name" content="چندبوم (Chandboom)" />
+    <meta property="og:image:alt" content="لوگوی رسمی کیفیار - حسابداری شخصی و دنگ" />
+    <meta property="og:site_name" content="کیفیار (Kifyar)" />
     <meta property="og:locale" content="fa_IR" />
-    <meta property="og:locale:alternate" content="en_US" />
 
     <!-- 4. Twitter / X Cards -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://chandboom.ir/" />
-    <meta name="twitter:title" content="چندبوم (Chandboom) | Next-Gen AI Financial Management" />
-    <meta name="twitter:description" content="Smart AI expense tracking, cash flow forecasting and group bill splitting with Chandboom." />
-    <meta name="twitter:image" content="https://chandboom.ir/assets/logo.png" />
+    <meta name="twitter:url" content="https://kif-yar.ir/" />
+    <meta name="twitter:title" content="کیفیار (kifyar) | سامانه هوشمند مدیریت مالی و حسابداری شخصی" />
+    <meta name="twitter:description" content="مدیریت آسان هزینه‌ها، گزارش‌های مالی هوشمند و تقسیم عادلانه دنگ با کیفیار." />
+    <meta name="twitter:image" content="https://kif-yar.ir/logo.png" />
 
     <!-- 5. PWA & Mobile Web App Meta Tags -->
-    <meta name="application-name" content="چندبوم" />
+    <meta name="application-name" content="کیفیار" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="چندبوم" />
+    <meta name="apple-mobile-web-app-title" content="کیفیار" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="mobile-web-app-capable" content="yes" />
 
@@ -55,62 +51,70 @@
     <meta name="theme-color" content="#090D0B" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#F8FAF9" media="(prefers-color-scheme: light)" />
 
-    <!-- 7. Favicon & Apple Touch Icons (Updated to logo.png) -->
-    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <!-- 7. Favicon & Apple Touch Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
+    <link rel="shortcut icon" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
     <link rel="manifest" href="/manifest.json" />
 
-    <!-- 8. Performance Preconnects & Bahman Font Preload -->
-    <link rel="preload" href="/fonts/ig6_bahman_(2).ttf" as="font" type="font/ttf" crossorigin />
+    <!-- 8. Performance Preconnects (بارگذاری سریع‌تر فونت‌ها) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Blaka&family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Reem+Kufi:wght@400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-    <!-- 9. Structured Data (JSON-LD) -->
+    <!-- 9. Structured Data (JSON-LD) برای درک کامل موتورهای جستجو و نمایش Rich Snippets در گوگل -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "SoftwareApplication",
-          "@id": "https://chandboom.ir/#software",
-          "name": "چندبوم",
-          "alternateName": ["Chandboom", "chandboom", "چند بوم", "سامانه مالی چندبوم", "Chandboom AI"],
-          "url": "https://chandboom.ir/",
+          "@type": "WebApplication",
+          "@id": "https://kif-yar.ir/#webapp",
+          "name": "کیفیار",
+          "alternateName": ["Kifyar", "kif-yar", "سامانه مدیریت مالی کیفیار"],
+          "url": "https://kif-yar.ir/",
           "applicationCategory": "FinanceApplication",
-          "operatingSystem": "Web, Android, iOS, Windows, macOS",
+          "operatingSystem": "All",
           "browserRequirements": "Requires JavaScript. Requires HTML5.",
-          "inLanguage": ["fa-IR", "en"],
-          "description": "پلتفرم هوشمند مدیریت مالی شخصی، بودجه‌بندی با هوش مصنوعی، پیش‌بینی ۳ ماهه جریان نقدینگی و تسویه دنگ گروهی | Next-Gen AI Financial & Wealth Management System.",
+          "inLanguage": "fa-IR",
+          "description": "سامانه هوشمند و امن مدیریت دخل و خرج شخصی، تحلیل هوشمند جریان نقدینگی، یادآور بدهی و بستانکاری و تسویه دنگ گروهی.",
           "offers": {
             "@type": "Offer",
             "price": "0",
             "priceCurrency": "IRR"
           },
           "featureList": [
-            "ثبت خودکار تراکنش‌ها تنها با ارسال یک پیام متنی با هوش مصنوعی",
-            "پیش‌بینی هوشمند وضعیت بودجه و جریان نقدینگی تا ۳ و ۶ ماه آینده",
-            "یادآور هوشمند سررسید اقساط، چک‌های بانکی و موعد پرداخت‌ها",
-            "محاسبه عادلانه دنگ سفر، رویدادهای گروهی و فاکتور تفکیک‌شده رستوران",
-            "امنیت چندمرحله‌ای، رمزنگاری پیشرفته و پشتیبانی اختصاصی"
+            "ثبت و دسته‌بندی درآمدها و هزینه‌ها",
+            "محاسبه هوشمند و تسویه عادلانه دنگ سفر و خرج‌های گروهی",
+            "گزارش‌های تحلیلی و نمودارهای مالی پیشرفته",
+            "سیستم یادآور سررسید اقساط، چک و بدهی‌ها",
+            "رمزنگاری ابری داده‌ها با بالاترین سطح امنیت"
           ]
         },
         {
-          "@type": "Organization",
-          "@id": "https://chandboom.ir/#organization",
-          "url": "https://chandboom.ir/",
-          "name": "چندبوم (Chandboom)",
-          "alternateName": "Chandboom Technologies",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://chandboom.ir/assets/logo.png"
+          "@type": "WebSite",
+          "@id": "https://kif-yar.ir/#website",
+          "url": "https://kif-yar.ir/",
+          "name": "کیفیار (kifyar)",
+          "inLanguage": "fa-IR",
+          "description": "سامانه آنلاین مدیریت مالی شخصی و تقسیم دنگ",
+          "publisher": {
+            "@type": "Organization",
+            "name": "کیفیار",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://kif-yar.ir/logo.png"
+            }
           }
         }
       ]
     }
     </script>
   </head>
-  <body class="bg-[#F8FAF9] text-zinc-900 dark:bg-[#090D0B] dark:text-zinc-100 min-h-screen transition-colors duration-200 selection:bg-emerald-600 selection:text-white font-cairo">
+  <body class="bg-[#F8FAF9] text-zinc-900 dark:bg-[#090D0B] dark:text-zinc-100 min-h-screen transition-colors duration-200 selection:bg-emerald-600 selection:text-white font-vazir">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

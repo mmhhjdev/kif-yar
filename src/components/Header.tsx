@@ -1,240 +1,448 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Wallet,
-  Shield,
-  Crown,
-  Moon,
+  Bell,
   Sun,
+  Moon,
+  PlusCircle,
+  LifeBuoy,
+  AlertTriangle,
+  Users,
+  CalendarCheck,
+  Receipt,
+  Settings,
+  ChevronDown,
+  Sparkles,
+  Wallet,
+  Camera,
   LogIn,
   LogOut,
-  Bell,
-  Sparkles,
-  ChevronDown,
-  User,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatToman } from '../utils/formatters';
+import { formatToman, toPersianDigits } from '../utils/formatters';
+
+// ایمپورت لوگو از پوشه src (چون پوشه public ندارید)
+import logoImage from '@/assets/images/logo.png';
 
 interface HeaderProps {
-  onOpenAdminModal: () => void;
+  onOpenTransactionModal: () => void;
+  onOpenReminderModal: () => void;
   onOpenAvatarModal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  onOpenAdminModal,
+  onOpenTransactionModal,
+  onOpenReminderModal,
   onOpenAvatarModal,
 }) => {
   const {
     user,
     isAuthenticated,
+    isAuthModalOpen,
     setIsAuthModalOpen,
     logout,
-    theme,
-    toggleTheme,
-    isProUser,
-    openSubscriptionModal,
-    requestSubscription,
-    isAdmin,
-    metrics,
-    reminders,
+    isDarkMode,
+    toggleDarkMode,
+    notifications,
+    unreadNotificationsCount,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    settleNotification,
     setActiveTab,
+    navigateToSupportWithTicket,
+    adminMode,
+    setAdminMode,
+    isAdmin,
   } = useApp();
 
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
-  const unpaidRemindersCount = reminders.filter((r) => !r.is_paid).length;
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getNotifIcon = (type: string) => {
+    switch (type) {
+      case 'budget_alert':
+        return <AlertTriangle className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />;
+      case 'debt_reminder':
+        return <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />;
+      case 'check_due':
+        return <CalendarCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />;
+      case 'bill_reminder':
+        return <Receipt className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />;
+      default:
+        return <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />;
+    }
+  };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0A100D]/95 backdrop-blur-md border-b border-[#E2E8E4] dark:border-[#1A2621] transition-colors font-cairo">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
-        {/* Logo & Brand */}
-        <div className="flex items-center gap-3 shrink-0">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#090D0B]/95 backdrop-blur-md border-b border-[#E2E8E4] dark:border-[#1A2621] transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        {/* Right side: Brand & Logo */}
+        <div className="flex items-center gap-3">
           <button
+            id="brand-logo-btn"
             onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-2.5 cursor-pointer group text-right"
-            title="مشاهده داشبورد چندبوم"
+            className="flex items-center gap-2.5 text-right group focus:outline-none cursor-pointer"
           >
-            <div className="w-10 h-10 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <img
-                src="/assets/logo.png"
-                alt="لوگوی رسمی چندبوم"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                }}
-                className="w-full h-full object-contain"
-              />
-            </div>
+            <img 
+              src={logoImage} 
+              alt="لوگوی کیفیار" 
+              className="h-10 w-auto object-contain" 
+            />
             <div className="flex flex-col">
-              <span className="font-brand font-bold text-2xl text-black dark:text-white tracking-tight select-none">
-                چندبوم
-              </span>
-              <span className="text-[10px] font-cairo font-bold text-emerald-700 dark:text-emerald-400 -mt-1 select-none">
-                سامانه هوشمند مالی و بودجه
+              <div className="flex items-center gap-1.5">
+                <span className="font-brand font-black text-lg text-zinc-900 dark:text-zinc-100 tracking-tight">
+                  کیفیار
+                </span>
+                <span className="text-[10px] font-vazir px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-bold">
+                  kifyar
+                </span>
+              </div>
+              <span className="text-[10px] font-vazir text-zinc-500 dark:text-zinc-400 font-medium">
+                سامانه مدیریت مالی هوشمند
               </span>
             </div>
           </button>
         </div>
 
-        {/* Center Quick Balance Capsule (Desktop) */}
-        <div className="hidden md:flex items-center gap-3 px-4 py-1.5 rounded-full bg-zinc-100/80 dark:bg-[#111A16] border border-[#E2E8E4] dark:border-[#1E2C25] text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="text-zinc-500">موجودی خالص:</span>
-            <span
-              className={`font-cairo font-bold ${
-                metrics.balance >= 0
-                  ? 'text-emerald-700 dark:text-emerald-400'
-                  : 'text-rose-600 dark:text-rose-400'
-              }`}
-            >
-              {formatToman(metrics.balance)}
-            </span>
-          </div>
-
-          <span className="text-zinc-300 dark:text-zinc-700">|</span>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-zinc-500">هزینه‌های ماه:</span>
-            <span className="font-cairo font-bold text-zinc-900 dark:text-white">
-              {formatToman(metrics.totalExpense)}
-            </span>
-          </div>
-        </div>
-
-        {/* Right Actions */}
+        {/* Center / Left side: Quick actions, Notifications, Support shortcut & Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Admin Panel Button strictly if admin */}
-          {isAdmin && (
-            <button
-              id="open-admin-dashboard-btn"
-              onClick={onOpenAdminModal}
-              title="ورود به پنل مدیریت ارشد"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-[#20152B] text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900/60 font-cairo font-bold text-xs hover:bg-purple-100 dark:hover:bg-[#2C1C3D] transition cursor-pointer shadow-xs"
-            >
-              <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-              <span className="hidden sm:inline">پنل مدیریت</span>
-            </button>
-          )}
-
-          {/* Golden Pro Subscription Button / Active Badge in Header */}
-          {isAuthenticated && isProUser ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-400/50 text-xs font-cairo font-bold shadow-xs">
-              <Crown className="w-3.5 h-3.5 text-amber-500" />
-              <span>حساب طلایی فعال</span>
-            </div>
-          ) : (
-            <button
-              id="header-buy-pro-btn"
-              onClick={requestSubscription}
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-zinc-950 font-cairo font-black text-xs transition cursor-pointer shadow-md hover:shadow-lg active:scale-95 shrink-0"
-            >
-              <Crown className="w-4 h-4 text-zinc-950" />
-              <span>خرید اشتراک طلایی</span>
-            </button>
-          )}
-
-          {/* Reminders Bell with Badge */}
+          {/* Quick Add Transaction Button */}
           <button
-            onClick={() => setActiveTab('reminders')}
-            title="یادآورهای سررسید"
-            className="relative p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-[#141F1A] transition cursor-pointer"
+            id="quick-add-tx-btn"
+            onClick={() => {
+              if (!isAuthenticated) {
+                setIsAuthModalOpen(true);
+              } else {
+                onOpenTransactionModal();
+              }
+            }}
+            className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-95 text-white text-xs sm:text-sm font-cairo font-bold shadow-xs transition cursor-pointer"
           >
-            <Bell className="w-4 h-4" />
-            {unpaidRemindersCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-600" />
-            )}
+            <PlusCircle className="w-4 h-4" />
+            <span>ثبت تراکنش</span>
           </button>
 
-          {/* Theme Switcher */}
+          {/* Support Shortcut Button */}
           <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'حالت روز' : 'حالت شب'}
-            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-[#141F1A] transition cursor-pointer"
+            id="header-support-shortcut-btn"
+            onClick={() => navigateToSupportWithTicket()}
+            title="مرکز پشتیبانی و تیکت‌ها"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-cairo font-bold bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 dark:bg-[#121F19] dark:hover:bg-[#1A2E25] dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/50 transition cursor-pointer"
           >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400" />
+            <LifeBuoy className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+            <span className="hidden sm:inline">پشتیبانی</span>
+          </button>
+
+          {/* Dark / Light Theme Toggle */}
+          <button
+            id="theme-toggle-btn"
+            onClick={toggleDarkMode}
+            title={isDarkMode ? 'تغییر به تم روشن' : 'تغییر به تم تاریک'}
+            className="p-2.5 rounded-xl text-zinc-700 dark:text-zinc-200 bg-white hover:bg-emerald-50 dark:bg-[#0F1512] dark:hover:bg-[#16201B] border border-[#E2E8E4] dark:border-[#1A2621] transition cursor-pointer"
+          >
+            {isDarkMode ? (
+              <Sun className="w-4 h-4 text-emerald-400" />
             ) : (
-              <Moon className="w-4 h-4 text-emerald-700" />
+              <Moon className="w-4 h-4 text-emerald-800" />
             )}
           </button>
 
-          {/* User Account / Auth Dropdown */}
-          {isAuthenticated ? (
-            <div className="relative">
-              <button
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-2 p-1 pl-2 rounded-2xl hover:bg-zinc-100 dark:hover:bg-[#141F1A] transition cursor-pointer"
+          {/* Notifications Bell Dropdown */}
+          <div className="relative" ref={notifRef}>
+            <button
+              id="notifications-bell-btn"
+              onClick={() => setIsNotifOpen((prev) => !prev)}
+              title="اعلان‌ها و یادآورهای هوشمند مالی"
+              className="relative p-2.5 rounded-xl text-zinc-700 dark:text-zinc-200 bg-white hover:bg-emerald-50 dark:bg-[#0F1512] dark:hover:bg-[#16201B] border border-[#E2E8E4] dark:border-[#1A2621] transition cursor-pointer"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold font-vazir flex items-center justify-center">
+                  {toPersianDigits(unreadNotificationsCount)}
+                </span>
+              )}
+            </button>
+
+            {/* Dropdown Menu */}
+            {isNotifOpen && (
+              <div
+                id="notifications-dropdown-menu"
+                className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#0F1512] rounded-2xl shadow-xl border border-[#E2E8E4] dark:border-[#1A2621] overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150"
               >
-                <img
-                  src={user.avatar_url}
-                  alt={user.full_name}
-                  className="w-8 h-8 rounded-xl object-cover border border-emerald-600 shadow-xs"
-                />
-                <span className="text-xs font-cairo font-bold text-zinc-800 dark:text-zinc-200 hidden lg:inline">
+                <div className="p-3.5 bg-emerald-50/50 dark:bg-[#141C18] border-b border-[#E2E8E4] dark:border-[#1A2621] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                    <h4 className="font-cairo text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      اعلان‌ها و یادآورهای مالی ({toPersianDigits(unreadNotificationsCount)})
+                    </h4>
+                  </div>
+                  {unreadNotificationsCount > 0 && (
+                    <button
+                      onClick={markAllNotificationsAsRead}
+                      className="text-[11px] font-vazir font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      خواندن همه
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-[#E2E8E4] dark:divide-[#1A2621] p-1 font-vazir">
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                      هیچ اعلانی ثبت نشده است.
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => markNotificationAsRead(n.id)}
+                        className={`p-3 rounded-xl transition cursor-pointer text-right flex items-start gap-2.5 ${
+                          !n.is_read
+                            ? 'bg-emerald-50/40 dark:bg-[#131E19]'
+                            : 'hover:bg-zinc-50 dark:hover:bg-[#131A16] opacity-80'
+                        }`}
+                      >
+                        <div className="mt-0.5">{getNotifIcon(n.type)}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-xs font-cairo font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                              {n.title}
+                            </span>
+                            {!n.is_read && (
+                              <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400 shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2 leading-relaxed">
+                            {n.message}
+                          </p>
+
+                          {/* Extra info for debt/check */}
+                          {(n.amount || n.due_date || n.person_name) && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                              {n.amount && (
+                                <span className="font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-[#121F19] px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-900/40">
+                                  {formatToman(n.amount)}
+                                </span>
+                              )}
+                              {n.due_date && (
+                                <span className="text-zinc-500 dark:text-zinc-400">
+                                  موعد: {toPersianDigits(n.due_date)}
+                                </span>
+                              )}
+                              {n.person_name && (
+                                <span className="text-emerald-800 dark:text-emerald-300 font-medium">
+                                  طرف حساب: {n.person_name}
+                                </span>
+                              )}
+                              {n.status === 'pending' && n.type === 'debt_reminder' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    settleNotification(n.id);
+                                  }}
+                                  className="mr-auto text-[10px] font-bold text-emerald-800 dark:text-emerald-200 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded hover:bg-emerald-200 cursor-pointer"
+                                >
+                                  تسویه شد
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="p-2.5 bg-emerald-50/50 dark:bg-[#141C18] border-t border-[#E2E8E4] dark:border-[#1A2621] flex items-center justify-between text-xs font-cairo">
+                  <button
+                    onClick={() => {
+                      setIsNotifOpen(false);
+                      if (!isAuthenticated) {
+                        setIsAuthModalOpen(true);
+                      } else {
+                        onOpenReminderModal();
+                      }
+                    }}
+                    className="text-emerald-800 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    افزودن یادآور دنگ یا چک
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsNotifOpen(false);
+                      setActiveTab('reminders');
+                    }}
+                    className="text-zinc-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-300 cursor-pointer"
+                  >
+                    مشاهده همه
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile / Authentication Menu */}
+          {isAuthenticated ? (
+            <div className="relative" ref={profileRef}>
+              <button
+                id="profile-dropdown-btn"
+                onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                className="flex items-center gap-2 p-1 rounded-xl hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
+              >
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenAvatarModal();
+                    setIsProfileMenuOpen(false);
+                  }}
+                  title="تغییر تصویر پروفایل"
+                  className="w-8 h-8 rounded-full ring-2 ring-emerald-600/40 hover:ring-emerald-500 overflow-hidden bg-emerald-100 dark:bg-[#121F19] flex items-center justify-center text-xs font-bold text-emerald-900 dark:text-emerald-300 font-cairo shadow-xs transition hover:scale-105"
+                >
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                  ) : (
+                    user.full_name.charAt(0)
+                  )}
+                </div>
+                <span className="text-xs font-cairo font-semibold text-zinc-800 dark:text-zinc-200 hidden lg:inline max-w-[100px] truncate">
                   {user.full_name}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-zinc-400 hidden lg:inline" />
               </button>
 
-              {isUserMenuOpen && (
+              {isProfileMenuOpen && (
                 <div
-                  onMouseLeave={() => setIsUserMenuOpen(false)}
-                  className="absolute left-0 mt-2 w-52 bg-white dark:bg-[#0F1512] rounded-2xl shadow-xl border border-[#E2E8E4] dark:border-[#1A2621] p-1.5 text-xs font-cairo font-bold space-y-1 z-50 animate-in fade-in zoom-in-95"
+                  id="profile-dropdown-menu"
+                  className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 bg-white dark:bg-[#0F1512] rounded-2xl shadow-xl border border-[#E2E8E4] dark:border-[#1A2621] overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150"
                 >
-                  <div className="px-3 py-2 border-b border-[#E2E8E4] dark:border-[#1A2621]">
-                    <p className="text-zinc-900 dark:text-white truncate">{user.full_name}</p>
-                    <p className="text-[11px] text-zinc-400 font-mono truncate">{user.email}</p>
+                  <div className="p-4 border-b border-[#E2E8E4] dark:border-[#1A2621] bg-emerald-50/30 dark:bg-[#121F19] flex items-center gap-3">
+                    <div
+                      onClick={() => {
+                        onOpenAvatarModal();
+                        setIsProfileMenuOpen(false);
+                      }}
+                      title="تغییر تصویر پروفایل"
+                      className="relative w-11 h-11 rounded-full ring-2 ring-emerald-600/30 overflow-hidden bg-emerald-100 dark:bg-[#15241C] shrink-0 cursor-pointer group"
+                    >
+                      <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                        <Camera className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-cairo font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{user.full_name}</p>
+                      <p className="text-xs font-vazir text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">{user.email}</p>
+                      <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100/70 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 text-[10px] font-bold font-cairo">
+                        واحد پول: {user.currency}
+                      </div>
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      onOpenAvatarModal();
-                    }}
-                    className="w-full text-right px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#16221D] transition flex items-center gap-2 cursor-pointer"
-                  >
-                    <User className="w-4 h-4 text-emerald-600" />
-                    <span>تغییر تصویر نمایه</span>
-                  </button>
+                  <div className="p-2 space-y-1 font-cairo">
+                    <button
+                      onClick={() => {
+                        onOpenAvatarModal();
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                      تغییر و آپلود تصویر پروفایل
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      setActiveTab('settings');
-                    }}
-                    className="w-full text-right px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-[#16221D] transition flex items-center gap-2 cursor-pointer"
-                  >
-                    <Shield className="w-4 h-4 text-emerald-600" />
-                    <span>تنظیمات حساب کاربری</span>
-                  </button>
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        setActiveTab('settings');
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                      حساب کاربری و تنظیمات
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      logout();
-                    }}
-                    className="w-full text-right px-3 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition flex items-center gap-2 cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>خروج از حساب</span>
-                  </button>
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        navigateToSupportWithTicket();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
+                    >
+                      <LifeBuoy className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
+                      مرکز تیکت و پشتیبانی کیفیار
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          setAdminMode(!adminMode);
+                          setIsProfileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-emerald-50 dark:hover:bg-[#121F19] transition cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          پنل پشتیبان (Admin Mode)
+                        </span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                            adminMode
+                              ? 'bg-emerald-700 text-white'
+                              : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          {adminMode ? 'فعال' : 'غیرفعال'}
+                        </span>
+                      </button>
+                    )}
+
+                    <div className="border-t border-[#E2E8E4] dark:border-[#1A2621] my-1" />
+
+                    {/* Logout Button */}
+                    <button
+                      id="logout-btn-header"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>خروج از حساب کاربری</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
             <button
-              id="open-auth-modal-header-btn"
+              id="login-btn-header"
               onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-cairo font-bold text-xs shadow-xs transition cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-cairo font-bold shadow-xs transition cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
-              <span>ورود / ثبت‌نام</span>
+              <span>ورود / ثبت‌نام با ایمیل</span>
             </button>
           )}
         </div>
       </div>
     </header>
-
-
-
   );
 };
