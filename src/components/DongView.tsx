@@ -71,17 +71,11 @@ export const DongView: React.FC = () => {
       const supabase = getSupabaseClient();
       if (!supabase) {
         setLoading(false);
-        setIsAuthenticated(false);
+        setIsAuthenticated(true);
         return;
       }
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsAuthenticated(false);
-        setLoading(false);
-        return;
-      }
-
       setIsAuthenticated(true);
       await fetchGroups(supabase);
     };
@@ -150,10 +144,10 @@ export const DongView: React.FC = () => {
     };
 
     if (isFamilyMode) {
-      const cleanFamilies = familyInputs.filter(f => f.name.trim() !== '');
+      const cleanFamilies = familyInputs.filter((f) => f.name.trim() !== '');
       if (!newGroupName || cleanFamilies.length === 0) return;
       groupDataToSave.families = cleanFamilies;
-      groupDataToSave.members = cleanFamilies.map(f => f.name);
+      groupDataToSave.members = cleanFamilies.map((f) => f.name);
     } else {
       const cleanMembers = memberInputs.map((m) => m.trim()).filter(Boolean);
       if (!newGroupName || cleanMembers.length === 0) return;
@@ -167,14 +161,14 @@ export const DongView: React.FC = () => {
       .select()
       .single();
 
-    if (error) return;
+    const createdId = data?.id || `grp_${Date.now()}`;
 
     const newGroup: Group = {
-      id: data.id,
-      name: data.name,
-      isFamilyMode: data.is_family_mode,
-      families: data.families || [],
-      members: data.members || [],
+      id: createdId,
+      name: newGroupName,
+      isFamilyMode,
+      families: groupDataToSave.families || [],
+      members: groupDataToSave.members || [],
       expenses: [],
     };
 
@@ -198,7 +192,7 @@ export const DongView: React.FC = () => {
 
     if (expenseType === 'itemized') {
       formattedBillItems = billItems
-        .filter(b => b.title.trim() && b.price)
+        .filter((b) => b.title.trim() && b.price)
         .map((b, idx) => ({
           id: String(idx + 1),
           title: b.title,
@@ -216,9 +210,9 @@ export const DongView: React.FC = () => {
 
     const allParticipantsSet = new Set<string>();
     if (expenseType === 'itemized') {
-      formattedBillItems.forEach(item => item.consumers.forEach(c => allParticipantsSet.add(c)));
+      formattedBillItems.forEach((item) => item.consumers.forEach((c) => allParticipantsSet.add(c)));
     } else {
-      selectedParticipants.forEach(p => allParticipantsSet.add(p));
+      selectedParticipants.forEach((p) => allParticipantsSet.add(p));
     }
 
     const payload = {
@@ -231,22 +225,20 @@ export const DongView: React.FC = () => {
       bill_items: formattedBillItems,
     };
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('dong_expenses')
       .insert([payload])
       .select()
       .single();
 
-    if (error) return;
-
     const newExpense: ExpenseItem = {
-      id: data.id,
-      title: data.title,
-      payer: data.payer,
-      amount: Number(data.amount),
-      participants: data.participants,
-      isItemized: data.is_itemized,
-      billItems: data.bill_items,
+      id: data?.id || `exp_${Date.now()}`,
+      title: expenseTitle,
+      payer: expensePayer,
+      amount: totalAmount,
+      participants: Array.from(allParticipantsSet),
+      isItemized: expenseType === 'itemized',
+      billItems: formattedBillItems,
     };
 
     const updatedGroups = groups.map((g) => {
@@ -266,10 +258,9 @@ export const DongView: React.FC = () => {
   const handleDeleteExpense = async (expenseId: string) => {
     if (!activeGroup) return;
     const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    const { error } = await supabase.from('dong_expenses').delete().eq('id', expenseId);
-    if (error) return;
+    if (supabase) {
+      await supabase.from('dong_expenses').delete().eq('id', expenseId);
+    }
 
     const updatedGroups = groups.map((g) => {
       if (g.id === activeGroup.id) {
@@ -283,10 +274,9 @@ export const DongView: React.FC = () => {
   const handleDeleteGroup = async (groupId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    const { error } = await supabase.from('dong_groups').delete().eq('id', groupId);
-    if (error) return;
+    if (supabase) {
+      await supabase.from('dong_groups').delete().eq('id', groupId);
+    }
 
     setGroups(groups.filter((g) => g.id !== groupId));
     if (activeGroupId === groupId) setActiveGroupId(null);
@@ -296,7 +286,7 @@ export const DongView: React.FC = () => {
     if (!activeGroup) return [];
 
     const balances: { [key: string]: number } = {};
-    const entities = activeGroup.isFamilyMode ? activeGroup.families.map(f => f.name) : activeGroup.members;
+    const entities = activeGroup.isFamilyMode ? activeGroup.families.map((f) => f.name) : activeGroup.members;
 
     entities.forEach((ent) => {
       balances[ent] = 0;
@@ -307,21 +297,21 @@ export const DongView: React.FC = () => {
         balances[exp.payer] += exp.amount;
       }
 
-      if (exp.isItemized && exp.billItems) {
+      if (exp.isItemized && exp.billItems && exp.billItems.length > 0) {
         exp.billItems.forEach((item) => {
           if (item.consumers.length === 0) return;
 
           if (activeGroup.isFamilyMode) {
             let totalConsumersCount = 0;
             item.consumers.forEach((cName) => {
-              const fam = activeGroup.families.find(f => f.name === cName);
+              const fam = activeGroup.families.find((f) => f.name === cName);
               if (fam) totalConsumersCount += fam.count;
             });
 
             if (totalConsumersCount > 0) {
               const costPerPerson = item.price / totalConsumersCount;
               item.consumers.forEach((cName) => {
-                const fam = activeGroup.families.find(f => f.name === cName);
+                const fam = activeGroup.families.find((f) => f.name === cName);
                 if (fam && balances[cName] !== undefined) {
                   balances[cName] -= costPerPerson * fam.count;
                 }
@@ -340,26 +330,28 @@ export const DongView: React.FC = () => {
         if (activeGroup.isFamilyMode) {
           let totalParticipatingCount = 0;
           exp.participants.forEach((pName) => {
-            const fam = activeGroup.families.find(f => f.name === pName);
+            const fam = activeGroup.families.find((f) => f.name === pName);
             if (fam) totalParticipatingCount += fam.count;
           });
 
           if (totalParticipatingCount > 0) {
             const costPerPerson = exp.amount / totalParticipatingCount;
             exp.participants.forEach((pName) => {
-              const fam = activeGroup.families.find(f => f.name === pName);
+              const fam = activeGroup.families.find((f) => f.name === pName);
               if (fam && balances[pName] !== undefined) {
                 balances[pName] -= costPerPerson * fam.count;
               }
             });
           }
         } else {
-          const share = exp.amount / exp.participants.length;
-          exp.participants.forEach((p) => {
-            if (balances[p] !== undefined) {
-              balances[p] -= share;
-            }
-          });
+          if (exp.participants.length > 0) {
+            const share = exp.amount / exp.participants.length;
+            exp.participants.forEach((p) => {
+              if (balances[p] !== undefined) {
+                balances[p] -= share;
+              }
+            });
+          }
         }
       }
     });
@@ -407,32 +399,26 @@ export const DongView: React.FC = () => {
   };
 
   const optimalTransfers = calculateOptimalTransfers();
-  const listToSelectFrom = activeGroup ? (activeGroup.isFamilyMode ? activeGroup.families.map(f => f.name) : activeGroup.members) : [];
+  const listToSelectFrom = activeGroup
+    ? activeGroup.isFamilyMode
+      ? activeGroup.families.map((f) => f.name)
+      : activeGroup.members
+    : [];
 
   if (loading) {
-    return <div className="py-12 text-center text-zinc-500 font-vazir">در حال بارگذاری اطلاعات...</div>;
-  }
-
-  if (isAuthenticated === false) {
-    return (
-      <div className="p-12 text-center bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] space-y-3 font-vazir shadow-xs">
-        <Users className="w-12 h-12 text-amber-500 mx-auto" />
-        <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-cairo">نیاز به ورود به حساب کاربری</h3>
-        <p className="text-xs text-zinc-500">برای مشاهده و مدیریت دنگ‌ها، لطفاً ابتدا وارد حساب کاربری خود شوید.</p>
-      </div>
-    );
+    return <div className="py-12 text-center text-zinc-500 font-cairo">در حال بارگذاری اطلاعات دنگ...</div>;
   }
 
   if (!activeGroup) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-200 font-vazir">
+      <div className="space-y-6 animate-in fade-in duration-200 font-cairo">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#0F1512] p-6 rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs">
           <div>
             <h2 className="font-cairo text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               مدیریت <span className="text-emerald-700 dark:text-emerald-400">دنگ و تسویه حساب</span>
             </h2>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-              گروه دوستانه یا جمع خانوادگی خود را بسازید و هزینه‌ها را به عادلانه‌ترین شکل تقسیم کنید.
+              گروه دوستانه یا جمع خانوادگی بسازید و خرج‌ها را به عادلانه‌ترین شکل تقسیم کنید.
             </p>
           </div>
           <button
@@ -460,7 +446,11 @@ export const DongView: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {group.isFamilyMode ? <Home className="w-4 h-4 text-amber-600" /> : <Users className="w-4 h-4 text-emerald-600" />}
+                      {group.isFamilyMode ? (
+                        <Home className="w-4 h-4 text-amber-600" />
+                      ) : (
+                        <Users className="w-4 h-4 text-emerald-600" />
+                      )}
                       <h3 className="font-cairo text-lg font-bold text-zinc-900 dark:text-zinc-100">{group.name}</h3>
                     </div>
                     <button
@@ -475,7 +465,7 @@ export const DongView: React.FC = () => {
                     {group.isFamilyMode ? 'خانواده‌ها: ' : 'اعضا: '}
                     <span className="text-zinc-800 dark:text-zinc-200">
                       {group.isFamilyMode
-                        ? group.families.map(f => `${f.name} (${toPersianDigits(f.count)} نفر)`).join('، ')
+                        ? group.families.map((f) => `${f.name} (${toPersianDigits(f.count)} نفر)`).join('، ')
                         : group.members.join('، ')}
                     </span>
                   </p>
@@ -492,7 +482,7 @@ export const DongView: React.FC = () => {
         </div>
 
         {isNewGroupModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
             <div className="bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] w-full max-w-md p-6 space-y-4 shadow-xl">
               <h3 className="font-cairo text-lg font-bold text-zinc-900 dark:text-zinc-100 border-b border-[#E2E8E4] dark:border-[#1A2621] pb-3">
                 ایجاد گروه جدید دنگ و تسویه
@@ -504,7 +494,7 @@ export const DongView: React.FC = () => {
                     type="text"
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
-                    placeholder="مثلا: سفر شمال، رستوران..."
+                    placeholder="مثلا: سفر شمال، دورهمی رستوران..."
                     required
                     className="w-full px-3 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#1A2621] bg-transparent text-zinc-900 dark:text-zinc-100 focus:outline-emerald-600"
                   />
@@ -514,14 +504,18 @@ export const DongView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsFamilyMode(false)}
-                    className={`flex-1 py-2 rounded-lg font-bold transition ${!isFamilyMode ? 'bg-white dark:bg-zinc-800 text-emerald-700 shadow-xs' : 'text-zinc-500'}`}
+                    className={`flex-1 py-2 rounded-lg font-bold transition ${
+                      !isFamilyMode ? 'bg-white dark:bg-zinc-800 text-emerald-700 shadow-xs' : 'text-zinc-500'
+                    }`}
                   >
                     گروه دوستانه (نفری)
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsFamilyMode(true)}
-                    className={`flex-1 py-2 rounded-lg font-bold transition ${isFamilyMode ? 'bg-white dark:bg-zinc-800 text-emerald-700 shadow-xs' : 'text-zinc-500'}`}
+                    className={`flex-1 py-2 rounded-lg font-bold transition ${
+                      isFamilyMode ? 'bg-white dark:bg-zinc-800 text-emerald-700 shadow-xs' : 'text-zinc-500'
+                    }`}
                   >
                     جمع خانوادگی (تعداد نفرات)
                   </button>
@@ -645,7 +639,7 @@ export const DongView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 font-vazir">
+    <div className="space-y-6 animate-in fade-in duration-200 font-cairo">
       <div className="bg-white dark:bg-[#0F1512] p-5 rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
@@ -657,14 +651,18 @@ export const DongView: React.FC = () => {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              {activeGroup.isFamilyMode ? <Home className="w-5 h-5 text-amber-600" /> : <Users className="w-5 h-5 text-emerald-700" />}
+              {activeGroup.isFamilyMode ? (
+                <Home className="w-5 h-5 text-amber-600" />
+              ) : (
+                <Users className="w-5 h-5 text-emerald-700" />
+              )}
               <h2 className="font-cairo text-xl font-bold text-zinc-900 dark:text-zinc-100">{activeGroup.name}</h2>
             </div>
             <p className="text-xs text-zinc-500 mt-1">
               {activeGroup.isFamilyMode ? 'خانواده‌ها: ' : 'اعضا: '}
               <span className="text-zinc-800 dark:text-zinc-200 font-medium">
                 {activeGroup.isFamilyMode
-                  ? activeGroup.families.map(f => `${f.name} (${toPersianDigits(f.count)} نفر)`).join('، ')
+                  ? activeGroup.families.map((f) => `${f.name} (${toPersianDigits(f.count)} نفر)`).join('، ')
                   : activeGroup.members.join('، ')}
               </span>
             </p>
@@ -688,15 +686,20 @@ export const DongView: React.FC = () => {
       <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-[#122019] dark:to-[#0F1814] p-5 rounded-2xl border border-emerald-200/60 dark:border-emerald-900/50 shadow-xs space-y-4">
         <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300">
           <Calculator className="w-5 h-5" />
-          <h3 className="font-cairo font-bold text-base">تسویه حساب نهایی</h3>
+          <h3 className="font-cairo font-bold text-base">تسویه حساب نهایی و کمترین تراکنش ممکن</h3>
         </div>
 
         {optimalTransfers.length === 0 ? (
-          <p className="text-xs text-emerald-700 dark:text-emerald-400">همه چیز حساب شده است؛ کسی به دیگری بدهکار نیست! 🎉</p>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+            همه هزینه‌ها مساوی پرداخت شده و هیچ بدهی در این گروه وجود ندارد!
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {optimalTransfers.map((t, idx) => (
-              <div key={idx} className="bg-white dark:bg-[#0A0F0D] p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/40 shadow-xs flex items-center justify-between">
+              <div
+                key={idx}
+                className="bg-white dark:bg-[#0A0F0D] p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/40 shadow-xs flex items-center justify-between"
+              >
                 <div className="text-xs space-y-1">
                   <span className="text-zinc-500 block">باید پرداخت کند:</span>
                   <div dir="ltr" className="flex items-center justify-start gap-1 font-bold text-sm">
@@ -729,22 +732,22 @@ export const DongView: React.FC = () => {
 
         <div className="divide-y divide-[#E2E8E4] dark:divide-[#1A2621]">
           {activeGroup.expenses.length === 0 ? (
-            <div className="p-8 text-center text-xs text-zinc-500">
-              هنوز هزینه‌ای در این گروه ثبت نشده است.
-            </div>
+            <div className="p-8 text-center text-xs text-zinc-500">هنوز هزینه‌ای در این گروه ثبت نشده است.</div>
           ) : (
             activeGroup.expenses.map((item) => (
               <div key={item.id} className="p-4 space-y-3 hover:bg-zinc-50/50 dark:hover:bg-[#141E1A] transition">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-cairo font-bold text-sm text-zinc-900 dark:text-zinc-100">{item.title}</span>
+                      <span className="font-cairo font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                        {item.title}
+                      </span>
                       <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full font-bold">
                         پرداخت توسط: {item.payer}
                       </span>
                       {item.isItemized && (
                         <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 rounded-full font-bold">
-                          فاکتور تفکیک‌شده رستوران 🍔
+                          فاکتور تفکیک‌شده رستوران
                         </span>
                       )}
                     </div>
@@ -769,8 +772,13 @@ export const DongView: React.FC = () => {
                     <span className="font-bold text-zinc-600 dark:text-zinc-400 block mb-1">ریز اقلام فاکتور:</span>
                     <div className="space-y-1">
                       {item.billItems.map((bi) => (
-                        <div key={bi.id} className="flex items-center justify-between py-1 border-b border-zinc-200/50 dark:border-zinc-800/50 last:border-0">
-                          <span className="font-medium text-zinc-800 dark:text-zinc-200">{bi.title} ({formatToman(bi.price)})</span>
+                        <div
+                          key={bi.id}
+                          className="flex items-center justify-between py-1 border-b border-zinc-200/50 dark:border-zinc-800/50 last:border-0"
+                        >
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                            {bi.title} ({formatToman(bi.price)})
+                          </span>
                           <span className="text-zinc-500">سهم: {bi.consumers.join('، ')}</span>
                         </div>
                       ))}
@@ -784,7 +792,7 @@ export const DongView: React.FC = () => {
       </div>
 
       {isExpenseModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] w-full max-w-lg p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="font-cairo text-lg font-bold text-zinc-900 dark:text-zinc-100 border-b border-[#E2E8E4] dark:border-[#1A2621] pb-3">
               ثبت هزینه جدید در {activeGroup.name}
@@ -796,7 +804,7 @@ export const DongView: React.FC = () => {
                   type="text"
                   value={expenseTitle}
                   onChange={(e) => setExpenseTitle(e.target.value)}
-                  placeholder="مثلا: رستوران شب، خرید صبحانه..."
+                  placeholder="مثلا: رستوران شب، خرید سوپرمارکت، بنزین..."
                   required
                   className="w-full px-3 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#1A2621] bg-transparent text-zinc-900 dark:text-zinc-100 focus:outline-emerald-600"
                 />
@@ -813,7 +821,9 @@ export const DongView: React.FC = () => {
                   >
                     <option value="">انتخاب پرداخت‌کننده</option>
                     {listToSelectFrom.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -826,7 +836,7 @@ export const DongView: React.FC = () => {
                     className="w-full px-3 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#1A2621] bg-white dark:bg-[#0A0F0D] text-zinc-900 dark:text-zinc-100 focus:outline-emerald-600 font-bold"
                   >
                     <option value="normal">تقسیم کلی یا نفری (اشتراکی)</option>
-                    <option value="itemized">فاکتور تفکیک‌شده (مخصوص رستوران 🍔)</option>
+                    <option value="itemized">فاکتور تفکیک‌شده (مخصوص رستوران)</option>
                   </select>
                 </div>
               </div>
@@ -847,13 +857,18 @@ export const DongView: React.FC = () => {
 
                   <div>
                     <label className="block text-zinc-600 dark:text-zinc-400 font-bold mb-1">
-                      {activeGroup.isFamilyMode ? 'کدام خانواده‌ها در این هزینه شریک بودند؟' : 'چه کسانی در این هزینه شریک بودند؟'}
+                      {activeGroup.isFamilyMode
+                        ? 'کدام خانواده‌ها در این هزینه شریک بودند؟'
+                        : 'چه کسانی در این هزینه شریک بودند؟'}
                     </label>
                     <div className="grid grid-cols-2 gap-2 mt-1 max-h-32 overflow-y-auto p-2 border border-[#E2E8E4] dark:border-[#1A2621] rounded-xl">
                       {listToSelectFrom.map((m) => {
                         const isChecked = selectedParticipants.includes(m);
                         return (
-                          <label key={m} className="flex items-center gap-2 cursor-pointer text-zinc-800 dark:text-zinc-200 p-1">
+                          <label
+                            key={m}
+                            className="flex items-center gap-2 cursor-pointer text-zinc-800 dark:text-zinc-200 p-1"
+                          >
                             <input
                               type="checkbox"
                               checked={isChecked}
@@ -892,7 +907,10 @@ export const DongView: React.FC = () => {
 
                   <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                     {billItems.map((bItem, index) => (
-                      <div key={index} className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#0A0F0D] space-y-2">
+                      <div
+                        key={index}
+                        className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#0A0F0D] space-y-2"
+                      >
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -933,7 +951,10 @@ export const DongView: React.FC = () => {
                             {listToSelectFrom.map((m) => {
                               const isChecked = bItem.consumers.includes(m);
                               return (
-                                <label key={m} className="flex items-center gap-1 text-[11px] bg-white dark:bg-zinc-900 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 cursor-pointer">
+                                <label
+                                  key={m}
+                                  className="flex items-center gap-1 text-[11px] bg-white dark:bg-zinc-900 px-2 py-1 rounded border border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                                >
                                   <input
                                     type="checkbox"
                                     checked={isChecked}
@@ -942,7 +963,7 @@ export const DongView: React.FC = () => {
                                       if (e.target.checked) {
                                         updated[index].consumers = [...updated[index].consumers, m];
                                       } else {
-                                        updated[index].consumers = updated[index].consumers.filter(c => c !== m);
+                                        updated[index].consumers = updated[index].consumers.filter((c) => c !== m);
                                       }
                                       setBillItems(updated);
                                     }}

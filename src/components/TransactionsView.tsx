@@ -1,186 +1,213 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
-  PlusCircle,
+  Plus,
   Search,
-  ArrowDownLeft,
-  ArrowUpRight,
+  Filter,
   Download,
   Trash2,
   Edit2,
-  Wallet,
-  X,
+  TrendingDown,
+  TrendingUp,
+  Sparkles,
+  ArrowUpDown,
+  Tag,
+  Calendar,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Transaction } from '../types';
-import {
-  formatToman,
-  toPersianDigits,
-} from '../utils/formatters';
+import { Transaction, TransactionCategory, TransactionType } from '../types';
+import { formatToman, formatShamsiDate, toPersianDigits } from '../utils/formatters';
+import { parsePersianFinancialText } from '../utils/aiParser';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../data/initialData';
 
 interface TransactionsViewProps {
-  onOpenAddModal: () => void;
-  onOpenEditModal: (tx: Transaction) => void;
+  onOpenTransactionModal: (tx?: Transaction) => void;
 }
 
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
-  onOpenAddModal,
-  onOpenEditModal,
+  onOpenTransactionModal,
 }) => {
-  const { transactions, deleteTransaction } = useApp();
+  const { transactions, deleteTransaction, addTransaction } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [accountFilter, setAccountFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc'>('date_desc');
+  const [quickAiText, setQuickAiText] = useState('');
 
-  // Filtered and sorted transactions
-  const filteredTransactions = useMemo(() => {
-    return transactions
-      .filter((tx) => {
-        // Type filter
-        if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
-        // Category filter
-        if (categoryFilter !== 'all' && tx.category !== categoryFilter) return false;
-        // Account filter
-        if (accountFilter !== 'all' && tx.account !== accountFilter) return false;
-        // Search query
-        if (searchQuery.trim()) {
-          const q = searchQuery.trim().toLowerCase();
-          const matchDesc = tx.description.toLowerCase().includes(q);
-          const matchCat = tx.category.toLowerCase().includes(q);
-          const matchTags = tx.tags?.some((t) => t.toLowerCase().includes(q)) || false;
-          const matchAmount = tx.amount.toString().includes(q);
-          if (!matchDesc && !matchCat && !matchTags && !matchAmount) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (sortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
-        if (sortBy === 'amount_desc') return b.amount - a.amount;
-        if (sortBy === 'amount_asc') return a.amount - b.amount;
-        return 0;
+  // Quick Natural Language Add
+  const handleQuickAiSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickAiText.trim()) return;
+
+    const parsed = parsePersianFinancialText(quickAiText);
+    if (parsed.amount) {
+      addTransaction({
+        type: parsed.type || 'expense',
+        amount: parsed.amount,
+        category: (parsed.category as TransactionCategory) || 'خوراک و غذا',
+        description: parsed.description || quickAiText.trim(),
+        date: new Date().toISOString(),
       });
-  }, [transactions, typeFilter, categoryFilter, accountFilter, searchQuery, sortBy]);
+      setQuickAiText('');
+    } else {
+      alert('مبلغ قابل تشخیصی در متن یافت نشد. مثلاً بنویسید: «خرید نان ۲۰۰۰۰ تومان»');
+    }
+  };
 
-  // Filtered totals
-  const filteredIncome = useMemo(() => {
-    return filteredTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  }, [filteredTransactions]);
+  // Filter transactions
+  const filtered = transactions.filter((tx) => {
+    if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
+    if (categoryFilter !== 'all' && tx.category !== categoryFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        tx.description.toLowerCase().includes(q) ||
+        tx.category.toLowerCase().includes(q) ||
+        tx.amount.toString().includes(q)
+      );
+    }
+    return true;
+  });
 
-  const filteredExpense = useMemo(() => {
-    return filteredTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  }, [filteredTransactions]);
-
-  // Export to CSV
+  // Export CSV
   const handleExportCSV = () => {
-    const headers = ['ردیف', 'نوع', 'مبلغ (تومان)', 'دسته‌بندی', 'تاریخ', 'توضیحات', 'حساب', 'برچسب‌ها'];
-    const rows = filteredTransactions.map((tx, idx) => [
-      idx + 1,
-      tx.type === 'expense' ? 'هزینه' : 'درآمد',
+    const headers = ['نوع', 'مبلغ (تومان)', 'دسته‌بندی', 'توضیحات', 'تاریخ'];
+    const rows = filtered.map((tx) => [
+      tx.type === 'income' ? 'درآمد' : 'هزینه',
       tx.amount,
-      `"${tx.category}"`,
-      tx.date,
+      tx.category,
       `"${tx.description.replace(/"/g, '""')}"`,
-      `"${tx.account}"`,
-      `"${(tx.tags || []).join('، ')}"`,
+      formatShamsiDate(tx.date),
     ]);
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const csvContent =
+      'data:text/csv;charset=utf-8,\uFEFF' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `kifyar_transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `chandboom_transactions_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const allCategories = Array.from(new Set(transactions.map((t) => t.category)));
+  const allCategories = Array.from(new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES]));
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200 font-vazir">
-      {/* Top Header & Actions */}
+    <div className="space-y-6 animate-in fade-in duration-200 font-cairo">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-cairo text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            دفتر کل تراکنش‌های مالی <span className="font-brand text-emerald-800 dark:text-emerald-400">کیفیار</span>
+            تراکنش‌های مالی و دفتر ثبت
           </h2>
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-            ثبت، جستجو، ویرایش و دسته‌بندی تمامی تراکنش‌های دخل و خرج
+            مشاهده، جستجو، فیلتر و خروجی اکسل از کلیه درآمدها و هزینه‌های ثبت شده در سامانه چندبوم
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 font-cairo">
           <button
-            id="export-csv-btn"
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#E2E8E4] dark:border-[#1A2621] bg-white hover:bg-emerald-50/50 dark:bg-[#0F1512] dark:hover:bg-[#16201B] text-xs font-cairo font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-[#0F1512] text-zinc-700 dark:text-zinc-300 border border-[#E2E8E4] dark:border-[#1A2621] hover:bg-zinc-50 dark:hover:bg-[#16221D] text-xs font-bold transition cursor-pointer shadow-xs"
           >
             <Download className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-            <span>خروجی اکسل / CSV</span>
+            <span>خروجی CSV (اکسل)</span>
           </button>
 
           <button
-            id="add-transaction-main-btn"
-            onClick={onOpenAddModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-95 text-white text-xs sm:text-sm font-cairo font-bold shadow-xs transition cursor-pointer"
+            id="open-add-transaction-modal-btn"
+            onClick={() => onOpenTransactionModal()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer"
           >
-            <PlusCircle className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
             <span>ثبت تراکنش جدید</span>
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar Card */}
-      <div className="bg-white dark:bg-[#0F1512] p-4 rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Search Input */}
-          <div className="relative lg:col-span-2">
-            <Search className="w-4 h-4 text-zinc-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+      {/* Natural Language Quick Input Bar */}
+      <form
+        onSubmit={handleQuickAiSubmit}
+        className="p-3 bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs flex items-center gap-2"
+      >
+        <div className="p-2 rounded-xl bg-emerald-50 dark:bg-[#121F19] text-emerald-700 dark:text-emerald-300 shrink-0">
+          <Sparkles className="w-4 h-4" />
+        </div>
+        <input
+          type="text"
+          value={quickAiText}
+          onChange={(e) => setQuickAiText(e.target.value)}
+          placeholder="ثبت سریع متنی با هوش مصنوعی (مثلاً: ۳۵ هزار تومن نان سنگک یا یک میلیون حقوق)..."
+          className="flex-1 text-xs sm:text-sm bg-transparent outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400 font-cairo"
+        />
+        <button
+          type="submit"
+          disabled={!quickAiText.trim()}
+          className="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-cairo font-bold transition cursor-pointer disabled:opacity-50 shrink-0"
+        >
+          ثبت سریع
+        </button>
+      </form>
+
+      {/* Filters Bar */}
+      <div className="p-4 bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-zinc-400 absolute right-3 top-1/2 -translate-y-1/2" />
             <input
-              id="search-transactions-input"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="جستجو در شرح، تگ‌ها یا دسته‌ها..."
-              className="w-full pr-10 pl-4 py-2 bg-zinc-50 dark:bg-[#141F1A] border border-[#E2E8E4] dark:border-[#1A2621] rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none"
+              placeholder="جستجو در عنوان، دسته‌بندی یا مبلغ..."
+              className="w-full pr-9 pl-4 py-2 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600 font-cairo"
             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
 
-          {/* Type Filter */}
-          <div>
-            <select
-              id="filter-type-select"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as any)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-[#141F1A] border border-[#E2E8E4] dark:border-[#1A2621] rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none font-cairo"
+          {/* Type Filter Buttons */}
+          <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-[#141F1A] rounded-xl text-xs font-cairo font-bold">
+            <button
+              onClick={() => setTypeFilter('all')}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                typeFilter === 'all'
+                  ? 'bg-white dark:bg-[#0F1512] text-zinc-900 dark:text-white shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400'
+              }`}
             >
-              <option value="all">همه تراکنش‌ها (دخل و خرج)</option>
-              <option value="expense">فقط هزینه‌ها (خرج)</option>
-              <option value="income">فقط درآمدها (دخل)</option>
-            </select>
+              همه ({toPersianDigits(transactions.length)})
+            </button>
+            <button
+              onClick={() => setTypeFilter('expense')}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                typeFilter === 'expense'
+                  ? 'bg-white dark:bg-[#0F1512] text-rose-600 dark:text-rose-400 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400'
+              }`}
+            >
+              هزینه‌ها
+            </button>
+            <button
+              onClick={() => setTypeFilter('income')}
+              className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                typeFilter === 'income'
+                  ? 'bg-white dark:bg-[#0F1512] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                  : 'text-zinc-600 dark:text-zinc-400'
+              }`}
+            >
+              درآمدها
+            </button>
           </div>
 
-          {/* Category Filter */}
-          <div>
+          {/* Category Dropdown */}
+          <div className="w-full sm:w-48">
             <select
-              id="filter-category-select"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-[#141F1A] border border-[#E2E8E4] dark:border-[#1A2621] rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none font-cairo"
+              className="w-full px-3 py-2 bg-zinc-50 dark:bg-[#141E1A] border border-[#E2E8E4] dark:border-[#1F2E27] rounded-xl text-xs text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600 font-cairo"
             >
-              <option value="all">تمامی دسته‌بندی‌ها</option>
+              <option value="all">همه دسته‌ها</option>
               {allCategories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
@@ -188,177 +215,94 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               ))}
             </select>
           </div>
-
-          {/* Sort By */}
-          <div>
-            <select
-              id="sort-transactions-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-[#141F1A] border border-[#E2E8E4] dark:border-[#1A2621] rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 outline-none font-cairo"
-            >
-              <option value="date_desc">جدیدترین به قدیمی‌ترین</option>
-              <option value="date_asc">قدیمی‌ترین به جدیدترین</option>
-              <option value="amount_desc">بیشترین مبلغ</option>
-              <option value="amount_asc">کمترین مبلغ</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Filter Summary Ribbon */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E2E8E4] dark:border-[#1A2621] text-xs font-cairo font-semibold">
-          <span className="text-zinc-500 dark:text-zinc-400 font-vazir">
-            تعداد نتایج: {toPersianDigits(filteredTransactions.length)} تراکنش
-          </span>
-          <div className="flex items-center gap-4">
-            <span className="text-emerald-700 dark:text-emerald-400">
-              مجموع درآمد: {formatToman(filteredIncome)}
-            </span>
-            <span className="text-zinc-700 dark:text-zinc-300">
-              مجموع هزینه: {formatToman(filteredExpense)}
-            </span>
-          </div>
         </div>
       </div>
 
       {/* Transactions Table / List */}
-      <div className="bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] overflow-hidden shadow-xs">
-        {filteredTransactions.length === 0 ? (
-          <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 space-y-3">
-            <p className="font-semibold text-sm">هیچ تراکنشی با فیلترهای انتخابی یافت نشد.</p>
+      <div className="bg-white dark:bg-[#0F1512] rounded-2xl border border-[#E2E8E4] dark:border-[#1A2621] shadow-xs overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="p-12 text-center text-zinc-400 space-y-3">
+            <p className="text-xs sm:text-sm">تراکنشی با مشخصات فیلتر شده یافت نشد.</p>
             <button
-              onClick={() => {
-                setSearchQuery('');
-                setTypeFilter('all');
-                setCategoryFilter('all');
-              }}
-              className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+              onClick={() => onOpenTransactionModal()}
+              className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-cairo font-bold text-xs cursor-pointer shadow-xs transition"
             >
-              پاک کردن همه فیلترها
+              ثبت اولین تراکنش
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs sm:text-sm">
-              <thead className="bg-emerald-50/50 dark:bg-[#141F1A] text-zinc-700 dark:text-zinc-200 font-cairo font-bold border-b border-[#E2E8E4] dark:border-[#1A2621]">
-                <tr>
-                  <th className="py-3.5 px-4">نوع و دسته‌بندی</th>
-                  <th className="py-3.5 px-4">شرح تراکنش</th>
-                  <th className="py-3.5 px-4">حساب / کیف</th>
-                  <th className="py-3.5 px-4">تاریخ</th>
-                  <th className="py-3.5 px-4 text-left">مبلغ (تومان)</th>
-                  <th className="py-3.5 px-4 text-center w-24">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8E4] dark:divide-[#1A2621] font-vazir">
-                {filteredTransactions.map((tx) => {
-                  return (
-                    <tr
-                      key={tx.id}
-                      className="hover:bg-emerald-50/30 dark:hover:bg-[#131E19] transition group"
+          <div className="divide-y divide-zinc-100 dark:divide-[#1A2621]/80">
+            {filtered.map((tx) => (
+              <div
+                key={tx.id}
+                className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-zinc-50/60 dark:hover:bg-[#121B17] transition"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                      tx.type === 'income'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-[#13251D] dark:text-emerald-300'
+                        : 'bg-rose-50 text-rose-700 dark:bg-[#251515] dark:text-rose-300'
+                    }`}
+                  >
+                    {tx.type === 'income' ? (
+                      <TrendingUp className="w-5 h-5" />
+                    ) : (
+                      <TrendingDown className="w-5 h-5" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <h4 className="font-cairo font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                      {tx.description}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500">
+                      <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-[#15201A] text-[11px]">
+                        {tx.category}
+                      </span>
+                      <span>•</span>
+                      <span>{formatShamsiDate(tx.date)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 shrink-0">
+                  <div className="text-left font-cairo">
+                    <span
+                      className={`text-base font-bold ${
+                        tx.type === 'income'
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : 'text-zinc-900 dark:text-white'
+                      }`}
                     >
-                      {/* Type & Category */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`p-1.5 rounded-lg ${
-                              tx.type === 'expense'
-                                ? 'bg-zinc-100 text-zinc-700 dark:bg-[#16221D] dark:text-zinc-300'
-                                : 'bg-emerald-50 text-emerald-700 dark:bg-[#121F19] dark:text-emerald-300'
-                            }`}
-                          >
-                            {tx.type === 'expense' ? (
-                              <ArrowDownLeft className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
-                            ) : (
-                              <ArrowUpRight className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
-                            )}
-                          </div>
-                          <div>
-                            <span className="font-cairo font-bold text-zinc-900 dark:text-zinc-100 block">
-                              {tx.category}
-                            </span>
-                            <span className="text-[10px] text-zinc-400">
-                              {tx.type === 'expense' ? 'هزینه' : 'درآمد'}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+                      {tx.type === 'income' ? '+ ' : '- '}
+                      {formatToman(tx.amount)}
+                    </span>
+                  </div>
 
-                      {/* Description & Tags */}
-                      <td className="py-3.5 px-4">
-                        <p className="font-medium text-zinc-800 dark:text-zinc-200 max-w-xs truncate">
-                          {tx.description}
-                        </p>
-                        {tx.tags && tx.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {tx.tags.map((t) => (
-                              <span
-                                key={t}
-                                className="text-[10px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-[#16221D] px-1.5 py-0.5 rounded"
-                              >
-                                #{t}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Account */}
-                      <td className="py-3.5 px-4 whitespace-nowrap text-zinc-600 dark:text-zinc-400 text-xs">
-                        <span className="inline-flex items-center gap-1 bg-zinc-100 dark:bg-[#16221D] px-2 py-0.5 rounded-md">
-                          <Wallet className="w-3 h-3 text-zinc-400" />
-                          {tx.account}
-                        </span>
-                      </td>
-
-                      {/* Date */}
-                      <td className="py-3.5 px-4 whitespace-nowrap text-zinc-600 dark:text-zinc-400 text-xs">
-                        {toPersianDigits(tx.date)}
-                      </td>
-
-                      {/* Amount */}
-                      <td className="py-3.5 px-4 whitespace-nowrap text-left">
-                        <span
-                          className={`font-cairo text-sm font-bold ${
-                            tx.type === 'expense'
-                              ? 'text-zinc-800 dark:text-zinc-200'
-                              : 'text-emerald-700 dark:text-emerald-400'
-                          }`}
-                        >
-                          {tx.type === 'expense' ? '-' : '+'} {formatToman(tx.amount)}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            id={`edit-tx-${tx.id}`}
-                            onClick={() => onOpenEditModal(tx)}
-                            title="ویرایش تراکنش"
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-[#16201B] transition cursor-pointer"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            id={`delete-tx-${tx.id}`}
-                            onClick={() => {
-                              if (confirm('آیا از حذف این تراکنش اطمینان دارید؟')) {
-                                deleteTransaction(tx.id);
-                              }
-                            }}
-                            title="حذف تراکنش"
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onOpenTransactionModal(tx)}
+                      title="ویرایش تراکنش"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-[#16251E] transition cursor-pointer"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('آیا از حذف این تراکنش اطمینان دارید؟')) {
+                          deleteTransaction(tx.id);
+                        }
+                      }}
+                      title="حذف تراکنش"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-[#281515] transition cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
